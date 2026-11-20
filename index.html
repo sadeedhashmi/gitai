@@ -1,0 +1,2891 @@
+
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Cosmo AI — Claude × Gemini × GPT + Leo</title>
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          },
+          colors: {
+            cosmo: {
+              bg: '#FFFFFF',
+              settingsBg: '#F6F6F7',
+              pill: '#F3F4F6',
+              pillHover: '#E5E7EB',
+              skyBg: '#E8F1FF',
+              skyText: '#2563EB',
+              blue: '#2563EB',
+              blueHover: '#1D4ED8',
+              ink: '#111827',
+              muted: '#6B7280',
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.35);
+      border-radius: 9999px;
+    }
+
+    @keyframes dotPulse {
+      0%, 80%, 100% { transform: scale(0.65); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+    .typing-dot {
+      animation: dotPulse 1.3s infinite ease-in-out;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.16s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.32s; }
+
+    @keyframes orbBreath {
+      0%, 100% {
+        transform: scale(0.96);
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.25);
+      }
+      50% {
+        transform: scale(1.04);
+        box-shadow: 0 0 42px 14px rgba(37, 99, 235, 0.24);
+      }
+    }
+    .live-orb-active {
+      animation: orbBreath 2.2s infinite ease-in-out;
+    }
+
+    @keyframes waveBar {
+      0%, 100% { transform: scaleY(0.32); }
+      50% { transform: scaleY(1); }
+    }
+    .live-wave-bar {
+      transform-origin: center;
+      animation: waveBar 0.9s infinite ease-in-out;
+      animation-play-state: paused;
+    }
+    .live-wave-running .live-wave-bar {
+      animation-play-state: running;
+    }
+
+    /* Clean Assistant Message Prose */
+    .message-prose p {
+      margin-bottom: 0.65rem;
+      line-height: 1.65;
+      color: #1F2937;
+    }
+    .message-prose p:last-child { margin-bottom: 0; }
+    .message-prose ul, .message-prose ol {
+      margin: 0.45rem 0 0.75rem 1.35rem;
+      color: #1F2937;
+    }
+    .message-prose ul { list-style-type: disc; }
+    .message-prose ol { list-style-type: decimal; }
+    .message-prose li { margin-bottom: 0.3rem; line-height: 1.58; }
+    .message-prose h1, .message-prose h2, .message-prose h3, .message-prose h4 {
+      font-weight: 600;
+      color: #111827;
+      margin-top: 0.95rem;
+      margin-bottom: 0.35rem;
+      line-height: 1.3;
+    }
+    .message-prose h1 { font-size: 1.18rem; }
+    .message-prose h2 { font-size: 1.06rem; }
+    .message-prose h3 { font-size: 0.98rem; }
+    .message-prose blockquote {
+      border-left: 3px solid #2563EB;
+      padding: 0.3rem 0.8rem;
+      margin: 0.6rem 0;
+      color: #374151;
+      background: #F8FAFC;
+      border-radius: 0 0.5rem 0.5rem 0;
+    }
+    .message-prose a {
+      color: #2563EB;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .message-prose code.inline-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.83em;
+      background: #F3F4F6;
+      border: 1px solid #E5E7EB;
+      color: #1D4ED8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.375rem;
+    }
+  </style>
+</head>
+
+<body class="h-full bg-white text-cosmo-ink font-sans antialiased overflow-hidden selection:bg-blue-100 selection:text-blue-900">
+  <!-- Main App Container -->
+  <div id="app" class="flex h-full w-full relative overflow-hidden bg-white">
+    <!-- Dimmed Backdrop for Slide-Out Sidebar -->
+    <div
+      id="sidebar-backdrop"
+      class="fixed inset-0 z-30 bg-black/35 hidden transition-opacity duration-200"
+      aria-hidden="true"
+    ></div>
+
+    <!-- ===================================================================== -->
+    <!-- 1. SLIDE-OUT SIDEBAR (Matches Screenshot 3 - 1000324318.jpg)          -->
+    <!-- ===================================================================== -->
+    <aside
+      id="sidebar"
+      class="fixed inset-y-0 left-0 z-40 w-[82%] max-w-[325px] bg-white flex flex-col transition-transform duration-200 ease-out -translate-x-full shadow-2xl"
+      aria-label="Cosmo AI Navigation and Chat History"
+    >
+      <!-- Sidebar Top Header: "Cosmo AI" + Circular Search Button -->
+      <div class="px-5 pt-4 pb-2 flex items-center justify-between gap-2 shrink-0">
+        <span class="text-[20px] font-semibold tracking-tight text-gray-900">Cosmo AI</span>
+
+        <button
+          id="sidebar-search-toggle"
+          type="button"
+          class="w-10 h-10 rounded-full bg-gray-100/90 hover:bg-gray-200/80 active:scale-95 flex items-center justify-center text-gray-800 transition cursor-pointer"
+          title="Search chats"
+          aria-label="Search chats"
+        >
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7.5" />
+            <line x1="20.5" y1="20.5" x2="16.35" y2="16.35" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Collapsible Chat Search Input -->
+      <div id="sidebar-search-bar" class="hidden px-4 pb-2 shrink-0">
+        <div class="flex items-center gap-2 bg-gray-100 rounded-full px-3.5 py-2">
+          <svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7.5" />
+            <line x1="20.5" y1="20.5" x2="16.35" y2="16.35" />
+          </svg>
+          <input
+            id="sidebar-search-input"
+            type="text"
+            placeholder="Search chat history..."
+            class="w-full bg-transparent text-sm text-gray-900 placeholder-gray-500 focus:outline-none"
+          />
+          <button id="sidebar-search-clear" type="button" class="text-xs text-gray-400 hover:text-gray-700 cursor-pointer">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable Sidebar Body: Feature Links + Divider + Chat History -->
+      <div class="flex-1 overflow-y-auto px-3 pt-1 pb-4">
+        <!-- Feature Navigation Items matching Screenshot 3 -->
+        <nav class="space-y-0.5" aria-label="Workspace tools">
+          <button
+            type="button"
+            data-nav-action="images"
+            class="sidebar-nav-item w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl hover:bg-gray-100 active:bg-gray-100 text-left transition cursor-pointer"
+          >
+            <!-- Overlapping Images Icon -->
+            <svg class="w-5 h-5 text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="5" width="14" height="14" rx="2.5" />
+              <path d="M7 3h12a2 2 0 0 1 2 2v12" />
+              <circle cx="8" cy="10" r="1.2" />
+              <path d="M17 15l-3.5-3.5L8 17" />
+            </svg>
+            <span class="text-[16px] font-medium text-gray-900">Images</span>
+          </button>
+
+          <button
+            type="button"
+            data-nav-action="library"
+            class="sidebar-nav-item w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl hover:bg-gray-100 active:bg-gray-100 text-left transition cursor-pointer"
+          >
+            <!-- Leaning Books / Library Icon -->
+            <svg class="w-5 h-5 text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="5" width="3.5" height="14" rx="1" />
+              <rect x="9.5" y="5" width="3.5" height="14" rx="1" />
+              <path d="M15.2 5.4l3.3-.8 2.8 13.6-3.3.8z" />
+            </svg>
+            <span class="text-[16px] font-medium text-gray-900">Library</span>
+          </button>
+
+          <button
+            type="button"
+            data-nav-action="customize"
+            class="sidebar-nav-item w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl hover:bg-gray-100 active:bg-gray-100 text-left transition cursor-pointer"
+          >
+            <!-- Sliders / Customize Icon -->
+            <svg class="w-5 h-5 text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="8" x2="20" y2="8" />
+              <line x1="4" y1="16" x2="20" y2="16" />
+              <circle cx="9" cy="8" r="2.2" fill="white" />
+              <circle cx="15" cy="16" r="2.2" fill="white" />
+            </svg>
+            <span class="text-[16px] font-medium text-gray-900">Customize</span>
+          </button>
+
+          <button
+            type="button"
+            data-nav-action="projects"
+            class="sidebar-nav-item w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl hover:bg-gray-100 active:bg-gray-100 text-left transition cursor-pointer"
+          >
+            <!-- Folder / Projects Icon -->
+            <svg class="w-5 h-5 text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
+            </svg>
+            <span class="text-[16px] font-medium text-gray-900">Projects</span>
+          </button>
+
+          <button
+            type="button"
+            data-nav-action="remote"
+            class="sidebar-nav-item w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl hover:bg-gray-100 active:bg-gray-100 text-left transition cursor-pointer"
+          >
+            <!-- Remote / Terminal Screen Icon -->
+            <svg class="w-5 h-5 text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="4" width="16" height="11" rx="2" />
+              <path d="M8 19h8" />
+              <path d="M12 15v4" />
+            </svg>
+            <span class="text-[16px] font-medium text-gray-900">Remote</span>
+          </button>
+
+          <button
+            type="button"
+            data-nav-action="explore"
+            class="sidebar-nav-item w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl hover:bg-gray-100 active:bg-gray-100 text-left transition cursor-pointer"
+          >
+            <!-- 4-Square Explore Grid Icon -->
+            <svg class="w-5 h-5 text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="4" width="6.5" height="6.5" rx="1.5" />
+              <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" />
+              <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" />
+              <rect x="14.5" y="14.5" width="5" height="5" rx="1" transform="rotate(12 17 17)" />
+            </svg>
+            <span class="text-[16px] font-medium text-gray-900">Explore</span>
+          </button>
+        </nav>
+
+        <!-- Horizontal Divider Line -->
+        <div class="my-3.5 mx-2 border-t border-gray-200"></div>
+
+        <!-- Saved Chat History List (supports Urdu RTL & English automatically) -->
+        <div id="chat-history-list" class="space-y-0.5"></div>
+
+        <!-- "See all..." Toggle -->
+        <button
+          id="see-all-chats-btn"
+          type="button"
+          class="hidden w-full text-left px-3 py-2.5 text-[15px] font-normal text-gray-500 hover:text-gray-800 transition cursor-pointer"
+        >
+          See all...
+        </button>
+      </div>
+
+      <!-- Sticky Sidebar Bottom Footer: Blue "Chat" Pill + Circular Profile Avatar ("SA") -->
+      <div class="px-4 py-3.5 bg-white flex items-center justify-between gap-3 shrink-0">
+        <button
+          id="sidebar-new-chat-btn"
+          type="button"
+          class="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-cosmo-blue hover:bg-cosmo-blueHover active:scale-[0.98] text-white text-[15px] font-medium shadow-xs transition cursor-pointer"
+        >
+          <!-- Compose Square+Pencil Icon -->
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+          <span>Chat</span>
+        </button>
+
+        <!-- Circular Profile Button -> Opens Full-Screen Settings -->
+        <button
+          id="sidebar-profile-settings-btn"
+          type="button"
+          class="w-11 h-11 rounded-full bg-gray-100 hover:bg-gray-200 p-1 flex items-center justify-center transition cursor-pointer relative"
+          title="Open Settings"
+          aria-label="Open Settings"
+        >
+          <span
+            id="sidebar-avatar-initials"
+            class="w-full h-full rounded-full bg-[#7A8189] text-white text-xs font-semibold flex items-center justify-center tracking-wide"
+          >
+            SA
+          </span>
+          <!-- Subtle pulsing badge only if one-time API key has not been configured yet -->
+          <span
+            id="sidebar-key-needed-dot"
+            class="hidden absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-cosmo-blue ring-2 ring-white"
+            title="One-time OpenRouter API Key setup available in Settings"
+          ></span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ===================================================================== -->
+    <!-- 2. MAIN CHAT WORKSPACE (Matches Screenshot 1 & Screenshot 2)          -->
+    <!-- ===================================================================== -->
+    <main class="flex-1 flex flex-col min-w-0 h-full bg-white relative">
+      <!-- Top Header Bar -->
+      <header class="h-16 shrink-0 px-4 sm:px-6 bg-white flex items-center justify-between gap-3 z-20">
+        <!-- Left: Circular Two-Line Menu Button + Soft Blue "✦ Cosmo Plus" Pill -->
+        <div class="flex items-center gap-2.5 min-w-0">
+          <button
+            id="menu-toggle-btn"
+            type="button"
+            class="w-10 h-10 rounded-full bg-cosmo-pill hover:bg-cosmo-pillHover active:scale-95 flex items-center justify-center text-gray-900 transition cursor-pointer shrink-0"
+            title="Open Sidebar"
+            aria-label="Open Sidebar"
+          >
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round">
+              <line x1="6" y1="9.5" x2="18" y2="9.5" />
+              <line x1="6" y1="14.5" x2="14.5" y2="14.5" />
+            </svg>
+          </button>
+
+          <button
+            id="cosmo-plus-pill"
+            type="button"
+            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-cosmo-skyBg hover:bg-blue-100/90 active:scale-[0.98] text-cosmo-skyText text-[15px] font-medium transition cursor-pointer truncate"
+            title="Customize Cosmo AI Model & Leo Star Thinking"
+          >
+            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2.5L14.1 9.9L21.5 12L14.1 14.1L12 21.5L9.9 14.1L2.5 12L9.9 9.9L12 2.5Z" />
+            </svg>
+            <span id="header-pill-label" class="truncate">Cosmo Plus</span>
+          </button>
+        </div>
+
+        <!-- Right: Circular Dashed Fresh-Chat Button -->
+        <button
+          id="header-new-chat-btn"
+          type="button"
+          class="w-10 h-10 rounded-full bg-cosmo-pill hover:bg-cosmo-pillHover active:scale-95 flex items-center justify-center text-gray-900 transition cursor-pointer shrink-0"
+          title="New Chat"
+          aria-label="New Chat"
+        >
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke-dasharray="3.2 2.6" d="M12 3.5a8.5 8.5 0 0 1 7.36 12.75L20.5 20.5l-4.25-1.14A8.5 8.5 0 1 1 12 3.5z" />
+          </svg>
+        </button>
+      </header>
+
+      <!-- Floating Toast Notification -->
+      <div
+        id="toast-banner"
+        class="hidden fixed top-18 left-1/2 -translate-x-1/2 z-50 max-w-xs sm:max-w-sm px-4 py-2.5 rounded-full border text-xs font-medium shadow-md transition-all"
+        role="status"
+      ></div>
+
+      <!-- Center Scrollable Area -->
+      <div id="messages-container" class="flex-1 overflow-y-auto px-4 sm:px-6 flex flex-col scroll-smooth">
+        <div id="messages-inner" class="w-full max-w-2xl mx-auto flex-1 flex flex-col">
+          <!-- Empty Home Screen matching Screenshot 1 -->
+          <div id="empty-state" class="flex-1 flex flex-col justify-end pb-4 sm:pb-6">
+            <!-- One-Time OpenRouter API Key Card (Visible until saved once, then permanently removed) -->
+            <div
+              id="main-api-setup-card"
+              class="mb-4 rounded-3xl bg-blue-50/75 border border-blue-200 p-4 shadow-2xs space-y-2.5"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <div class="text-sm font-semibold text-gray-900">OpenRouter API Key (One-Time Setup)</div>
+                <span class="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-white text-cosmo-blue border border-blue-200">
+                  Required Once
+                </span>
+              </div>
+              <p class="text-xs text-gray-600 leading-relaxed">
+                Enter your OpenRouter API key below and click Save. Once saved, this API key box is permanently removed.
+              </p>
+              <form id="main-api-setup-form" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <input
+                  id="main-api-setup-input"
+                  type="password"
+                  autocomplete="off"
+                  placeholder="Enter OpenRouter API Key (sk-or-v1-...)"
+                  class="flex-1 rounded-2xl bg-white border border-gray-200 focus:border-cosmo-blue focus:outline-none px-3.5 py-2 text-sm font-mono text-gray-900 placeholder-gray-400"
+                />
+                <button
+                  type="submit"
+                  class="px-5 py-2 rounded-full bg-cosmo-blue hover:bg-cosmo-blueHover active:scale-[0.98] text-white text-sm font-semibold shadow-xs transition cursor-pointer shrink-0"
+                >
+                  Save API Key
+                </button>
+              </form>
+            </div>
+
+            <div class="space-y-1.5 sm:space-y-2">
+              <button
+                type="button"
+                data-starter="Explain a complex topic clearly with Gemini-style structured points and Claude-grade clarity."
+                class="starter-btn w-full flex items-center gap-3.5 px-2.5 py-2.5 rounded-2xl hover:bg-gray-100/80 active:bg-gray-100 text-left transition cursor-pointer group"
+              >
+                <svg class="w-5 h-5 text-gray-700 group-hover:text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                  <path d="M6 12v5c3 3 9 3 12 0v-5" />
+                </svg>
+                <span class="text-[16px] font-normal text-gray-700 group-hover:text-gray-900">Learn something</span>
+              </button>
+
+              <button
+                type="button"
+                data-starter="Craft a vivid, cinematic image generation prompt with lighting, lens, and composition details."
+                class="starter-btn w-full flex items-center gap-3.5 px-2.5 py-2.5 rounded-2xl hover:bg-gray-100/80 active:bg-gray-100 text-left transition cursor-pointer group"
+              >
+                <svg class="w-5 h-5 text-gray-700 group-hover:text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="3" ry="3" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+                <span class="text-[16px] font-normal text-gray-700 group-hover:text-gray-900">Create an image</span>
+              </button>
+
+              <button
+                type="button"
+                data-starter="Help me write or polish an important message with warmth, clarity, and impact."
+                class="starter-btn w-full flex items-center gap-3.5 px-2.5 py-2.5 rounded-2xl hover:bg-gray-100/80 active:bg-gray-100 text-left transition cursor-pointer group"
+              >
+                <svg class="w-5 h-5 text-gray-700 group-hover:text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                </svg>
+                <span class="text-[16px] font-normal text-gray-700 group-hover:text-gray-900">Write or edit</span>
+              </button>
+
+              <button
+                type="button"
+                data-starter="Activate Leo Star Thinking to analyze a big creative or technical idea from first principles."
+                class="starter-btn w-full flex items-center gap-3.5 px-2.5 py-2.5 rounded-2xl hover:bg-gray-100/80 active:bg-gray-100 text-left transition cursor-pointer group"
+              >
+                <svg class="w-5 h-5 text-gray-700 group-hover:text-cosmo-blue shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2.5L14.2 9.8L21.5 12L14.2 14.2L12 21.5L9.8 14.2L2.5 12L9.8 9.8L12 2.5Z" />
+                </svg>
+                <span class="text-[16px] font-normal text-gray-700 group-hover:text-gray-900">Leo Star Thinking</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Active Message Thread -->
+          <div id="message-list" class="py-4 space-y-5 hidden"></div>
+        </div>
+      </div>
+
+      <!-- Quick "+" Popover Menu -->
+      <div
+        id="plus-popover"
+        class="hidden fixed bottom-20 left-4 sm:left-auto z-40 w-64 rounded-2xl bg-white border border-gray-200 shadow-xl p-1.5 space-y-0.5"
+        role="menu"
+      >
+        <button
+          id="popover-toggle-leo"
+          type="button"
+          class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-100 text-xs font-medium text-gray-800 transition cursor-pointer"
+        >
+          <span class="flex items-center gap-2">
+            <span class="text-cosmo-blue">✦</span>
+            <span>Leo Star Thinking</span>
+          </span>
+          <span id="popover-leo-state" class="text-[11px] font-semibold text-cosmo-blue">ON</span>
+        </button>
+
+        <button
+          id="popover-open-customize"
+          type="button"
+          class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-100 text-xs font-medium text-gray-800 transition cursor-pointer"
+        >
+          <span class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="4" y1="8" x2="20" y2="8" />
+              <line x1="4" y1="16" x2="20" y2="16" />
+              <circle cx="9" cy="8" r="2" fill="white" />
+              <circle cx="15" cy="16" r="2" fill="white" />
+            </svg>
+            <span>Customize Model &amp; Style</span>
+          </span>
+          <span id="popover-lens-name" class="text-[11px] text-gray-500">Fusion</span>
+        </button>
+
+        <button
+          id="popover-attach-file"
+          type="button"
+          class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-gray-100 text-xs font-medium text-gray-800 transition cursor-pointer"
+        >
+          <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+          </svg>
+          <span>Insert Text File</span>
+        </button>
+      </div>
+      <input id="hidden-file-input" type="file" accept=".txt,.md,.json,.csv,.js,.py,.html" class="hidden" />
+
+      <!-- Bottom Floating Pill Input Bar (Exact Match to Screenshot 1 & Screenshot 2) -->
+      <div class="shrink-0 px-3 sm:px-6 pb-4 pt-2 bg-white">
+        <form id="chat-form" class="w-full max-w-2xl mx-auto">
+          <div class="flex items-end gap-1.5 bg-[#F5F5F6] rounded-[28px] px-2.5 py-2 border border-gray-200/70 focus-within:border-gray-300 focus-within:bg-gray-100/90 shadow-2xs transition">
+            <!-- Left "+" Button -->
+            <button
+              id="plus-btn"
+              type="button"
+              class="w-9 h-9 rounded-full hover:bg-gray-200/80 active:scale-95 flex items-center justify-center text-gray-800 shrink-0 transition cursor-pointer"
+              title="Quick Tools"
+              aria-label="Quick Tools"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+
+            <!-- Auto-Expanding Input Box -->
+            <textarea
+              id="prompt-input"
+              rows="1"
+              dir="auto"
+              placeholder="Ask Cosmo AI"
+              class="flex-1 bg-transparent text-[16px] text-gray-900 placeholder-gray-500 py-1.5 px-1 resize-none max-h-36 focus:outline-none leading-snug"
+            ></textarea>
+
+            <!-- Right Group: Mic Dictation + Royal Blue Dynamic Circular Button -->
+            <div class="flex items-center gap-1 shrink-0">
+              <button
+                id="dictate-btn"
+                type="button"
+                class="w-9 h-9 rounded-full hover:bg-gray-200/80 active:scale-95 flex items-center justify-center text-gray-900 transition cursor-pointer"
+                title="Voice Dictation"
+                aria-label="Voice Dictation"
+              >
+                <svg id="dictate-mic-svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="22" />
+                </svg>
+              </button>
+
+              <!-- Royal Blue Circular Button:
+                   Empty input -> White 4-bar waveform (launches Go Live Voice Chat)
+                   Text entered -> White Up-Arrow Send button (sends message)
+                   Streaming -> White Square Stop button -->
+              <button
+                id="blue-action-btn"
+                type="button"
+                data-mode="live"
+                class="w-10 h-10 rounded-full bg-cosmo-blue hover:bg-cosmo-blueHover active:scale-95 text-white flex items-center justify-center shadow-xs transition-all duration-150 cursor-pointer"
+                title="Go Live Voice Chat"
+                aria-label="Go Live Voice Chat"
+              >
+                <!-- 4-Bar Vertical Waveform Icon -->
+                <svg id="icon-wave" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                  <line x1="6" y1="10" x2="6" y2="14" />
+                  <line x1="10" y1="6.5" x2="10" y2="17.5" />
+                  <line x1="14" y1="8" x2="14" y2="16" />
+                  <line x1="18" y1="10.5" x2="18" y2="13.5" />
+                </svg>
+
+                <!-- Upward Send Arrow Icon -->
+                <svg id="icon-send" class="w-5 h-5 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="19" x2="12" y2="5" />
+                  <polyline points="6 11 12 5 18 11" />
+                </svg>
+
+                <!-- Stop Icon -->
+                <svg id="icon-stop" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="6" width="12" height="12" rx="2.5" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- 3. FULL-SCREEN SETTINGS PAGE (Matches Screenshot 4 - 1000324319.jpg)    -->
+  <!-- ======================================================================= -->
+  <div
+    id="settings-screen"
+    class="fixed inset-0 z-50 hidden flex-col bg-cosmo-settingsBg"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="settings-page-title"
+  >
+    <!-- Top Bar: Circular Back Button, Centered Bold "Settings", Circular Info Button -->
+    <header class="h-16 px-4 sm:px-6 flex items-center justify-between bg-cosmo-settingsBg shrink-0">
+      <button
+        id="settings-back-btn"
+        type="button"
+        class="w-10 h-10 rounded-full bg-white hover:bg-gray-100 active:scale-95 flex items-center justify-center text-gray-900 shadow-2xs border border-gray-200/60 transition cursor-pointer"
+        title="Back to Chat"
+        aria-label="Back to Chat"
+      >
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12" />
+          <polyline points="12 19 5 12 12 5" />
+        </svg>
+      </button>
+
+      <h1 id="settings-page-title" class="text-[18px] font-semibold text-gray-900">Settings</h1>
+
+      <button
+        id="settings-info-btn"
+        type="button"
+        class="w-10 h-10 rounded-full bg-white hover:bg-gray-100 active:scale-95 flex items-center justify-center text-gray-900 shadow-2xs border border-gray-200/60 transition cursor-pointer"
+        title="About Cosmo AI"
+        aria-label="About Cosmo AI"
+      >
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9" />
+          <line x1="12" y1="11" x2="12" y2="16" />
+          <circle cx="12" cy="8" r="0.7" fill="currentColor" />
+        </svg>
+      </button>
+    </header>
+
+    <!-- Scrollable Grouped Cards List -->
+    <div id="settings-scroll-area" class="flex-1 overflow-y-auto px-4 sm:px-6 pt-2 pb-24">
+      <div class="max-w-lg mx-auto space-y-4">
+        <!-- ================================================================= -->
+        <!-- ONE-TIME OPENROUTER API KEY CARD                                  -->
+        <!-- Rendered ONLY if not yet locked. Removed from DOM forever once    -->
+        <!-- the user saves their OpenRouter API key!                          -->
+        <!-- ================================================================= -->
+        <div
+          id="one-time-api-card"
+          data-setting-search="openrouter api key setup token connect"
+          class="rounded-3xl bg-white p-4 shadow-2xs border border-blue-200 space-y-3"
+        >
+          <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-full bg-cosmo-skyBg text-cosmo-blue flex items-center justify-center shrink-0 mt-0.5">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+              </svg>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[15px] font-semibold text-gray-900">OpenRouter API Key (One-Time Setup)</div>
+              <p class="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                Enter your OpenRouter API key once below. After saving, this option is permanently locked and removed from Settings.
+              </p>
+            </div>
+          </div>
+
+          <form id="one-time-api-form" class="space-y-2.5">
+            <input
+              id="one-time-api-input"
+              type="password"
+              autocomplete="off"
+              placeholder="sk-or-v1-..."
+              class="w-full rounded-2xl bg-gray-50 border border-gray-200 focus:border-cosmo-blue focus:bg-white focus:outline-none px-3.5 py-2.5 text-sm font-mono text-gray-900 placeholder-gray-400"
+            />
+            <button
+              type="submit"
+              class="w-full py-2.5 px-4 rounded-full bg-cosmo-blue hover:bg-cosmo-blueHover active:scale-[0.99] text-white text-sm font-semibold shadow-xs transition cursor-pointer"
+            >
+              Save &amp; Lock API Key
+            </button>
+          </form>
+        </div>
+
+        <!-- Card Group 1: Account, Workspace, Upgrade to Cosmo Plus (Matches Screenshot 4) -->
+        <div
+          data-setting-search="account profile name workspace personal upgrade cosmo plus"
+          class="settings-group-card rounded-3xl bg-white overflow-hidden shadow-2xs border border-gray-200/50 divide-y divide-gray-100"
+        >
+          <!-- Account Row -->
+          <button
+            id="setting-row-account"
+            type="button"
+            class="w-full px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50/80 text-left transition cursor-pointer"
+          >
+            <div class="flex items-center gap-3.5 min-w-0">
+              <span
+                id="settings-avatar-initials"
+                class="w-8 h-8 rounded-full bg-[#7A8189] text-white text-xs font-semibold flex items-center justify-center shrink-0"
+              >
+                SA
+              </span>
+              <div class="min-w-0">
+                <div class="text-[16px] font-medium text-gray-900 leading-tight">Account</div>
+                <div id="settings-account-name" class="text-[14px] text-gray-400 truncate mt-0.5">Shahzad Anjum</div>
+              </div>
+            </div>
+            <svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+
+          <!-- Workspace Row -->
+          <button
+            id="setting-row-workspace"
+            type="button"
+            class="w-full px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50/80 text-left transition cursor-pointer"
+          >
+            <div class="flex items-center gap-3.5">
+              <svg class="w-5 h-5 text-gray-800 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="7" width="20" height="14" rx="2" />
+                <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+              </svg>
+              <span class="text-[16px] font-medium text-gray-900">Workspace</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="settings-workspace-label" class="text-[15px] text-gray-400">Personal</span>
+              <svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </div>
+          </button>
+
+          <!-- Upgrade to Cosmo Plus Row -->
+          <button
+            id="setting-row-upgrade"
+            type="button"
+            class="w-full px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50/80 text-left transition cursor-pointer"
+          >
+            <div class="flex items-center gap-3.5">
+              <svg class="w-5 h-5 text-cosmo-blue shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2.5L14.2 9.8L21.5 12L14.2 14.2L12 21.5L9.8 14.2L2.5 12L9.8 9.8L12 2.5Z" />
+              </svg>
+              <span class="text-[16px] font-medium text-cosmo-blue leading-snug">Upgrade to Cosmo Plus</span>
+            </div>
+            <svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Card Group 2: Customize Cosmo AI (Matches Screenshot 4) -->
+        <div
+          data-setting-search="customize cosmo ai personality memory model claude gemini gpt leo star thinking"
+          class="settings-group-card rounded-3xl bg-white overflow-hidden shadow-2xs border border-gray-200/50"
+        >
+          <button
+            id="setting-row-customize"
+            type="button"
+            class="w-full px-4 py-4 flex items-center justify-between gap-3 hover:bg-gray-50/80 text-left transition cursor-pointer"
+          >
+            <div class="flex items-center gap-3.5 min-w-0">
+              <svg class="w-5 h-5 text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+              <div class="min-w-0">
+                <div class="text-[16px] font-medium text-gray-900">Customize Cosmo AI</div>
+                <div id="settings-customize-sub" class="text-[14px] text-gray-400 leading-snug mt-0.5">
+                  Personality, models &amp; Leo Star Thinking
+                </div>
+              </div>
+            </div>
+            <svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Card Group 3: General, Usage and limits, Notifications, Voice, Safety & wellbeing, Security (Matches Screenshot 4) -->
+        <div
+          data-setting-search="general usage and limits notifications voice speech safety wellbeing security login clear chats"
+          class="settings-group-card rounded-3xl bg-white overflow-hidden shadow-2xs border border-gray-200/50 divide-y divide-gray-100"
+        >
+          <button
+            id="setting-row-general"
+            type="button"
+            class="w-full px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50/80 text-left transition cursor-pointer"
+          >
+            <div class="flex items-center gap-3.5">
+              <svg class="w-5 h-5 text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+              <span class="text-[16px] font-medium text-gray-900">General</span>
+            </div>
+            <svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+
+          <button
+            id="setting-row-usage"
+            type="button"
+            class="w-full px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50/80 text-left transition cursor-pointer"
+          >
+            <div class="flex items-center gap-3.5">
+              <svg class="w-5 h-5 text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="3" />
+                <polyline points="7 14 10 11 13 13 17 9" />
+              </svg>
+              <span class="text-[16px] font-medium text-gray-900">Usage and limits</span>
+            </div>
+            <svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+
+          <button
+            id="setting-row-notifications"
+            type="button"
+            class="w-full px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50/80 text-left transition cursor-pointer"
+          >
+            <div class="flex items-center gap-3.5">
+              <svg class="w-5 h-5 text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <span class="text-[16px] font-medium text-gray-900">Notifications</span>
+            </div>
+            <svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+
+          <button
+            id="setting-row-voice"
+            type="button"
+            class="w-full px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50/80 text-left transition cursor-pointer"
+          >
+            <div class="flex items-center gap-3.5">
+              <svg class="w-5 h-5 text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="5" y1="10" x2="5" y2="14" />
+                <line x1="9.5" y1="6" x2="9.5" y2="18" />
+                <line x1="14" y1="8" x2="14" y2="16" />
+                <line x1="18.5" y1="10.5" x2="18.5" y2="13.5" />
+              </svg>
+              <span class="text-[16px] font-medium text-gray-900">Voice</span>
+            </div>
+            <svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+
+          <button
+            id="setting-row-safety"
+            type="button"
+            class="w-full px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50/80 text-left transition cursor-pointer"
+          >
+            <div class="flex items-center gap-3.5">
+              <svg class="w-5 h-5 text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <polyline points="9 12 11 14 15 10" />
+              </svg>
+              <span class="text-[16px] font-medium text-gray-900">Safety &amp; wellbeing</span>
+            </div>
+            <svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+
+          <button
+            id="setting-row-security"
+            type="button"
+            class="w-full px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50/80 text-left transition cursor-pointer"
+          >
+            <div class="flex items-center gap-3.5">
+              <svg class="w-5 h-5 text-gray-900 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="11" width="16" height="10" rx="2" />
+                <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+              </svg>
+              <span class="text-[16px] font-medium text-gray-900">Security and login</span>
+            </div>
+            <svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Floating "Search settings" Pill Bar (Matches Screenshot 4) -->
+    <div class="fixed bottom-4 left-0 right-0 px-4 sm:px-6 pointer-events-none z-20">
+      <div class="max-w-lg mx-auto pointer-events-auto">
+        <div class="flex items-center gap-2.5 bg-white/95 backdrop-blur-md rounded-full px-4 py-3 shadow-lg border border-gray-200/80">
+          <svg class="w-5 h-5 text-gray-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7.5" />
+            <line x1="20.5" y1="20.5" x2="16.35" y2="16.35" />
+          </svg>
+          <input
+            id="settings-search-input"
+            type="text"
+            placeholder="Search settings"
+            class="w-full bg-transparent text-[15px] text-gray-900 placeholder-gray-400 focus:outline-none"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- 4. CUSTOMIZE & SUB-SHEET MODAL (Model, Leo Star, Account, Voice)        -->
+  <!-- ======================================================================= -->
+  <div
+    id="sub-sheet-modal"
+    class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/35 p-0 sm:p-4"
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white p-5 shadow-2xl border border-gray-100 max-h-[88vh] overflow-y-auto space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 id="sub-sheet-title" class="text-base font-semibold text-gray-900">Customize Cosmo AI</h2>
+        <button
+          id="close-sub-sheet-btn"
+          type="button"
+          class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition cursor-pointer"
+        >
+          ✕
+        </button>
+      </div>
+      <div id="sub-sheet-body" class="space-y-4"></div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- 5. GO LIVE VOICE CHAT OVERLAY (Triggered by Royal Blue Waveform Button) -->
+  <!-- ======================================================================= -->
+  <div
+    id="go-live-overlay"
+    class="fixed inset-0 z-50 hidden flex-col bg-white"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Cosmo Go Live Voice Chat"
+  >
+    <div class="h-16 px-4 sm:px-6 flex items-center justify-between border-b border-gray-100 shrink-0">
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cosmo-skyBg text-cosmo-blue text-xs font-semibold">
+        <span class="w-2 h-2 rounded-full bg-cosmo-blue animate-pulse"></span>
+        <span>Cosmo Live</span>
+      </div>
+
+      <select
+        id="live-lens-select"
+        aria-label="Live Fusion Persona"
+        class="rounded-full bg-gray-100 px-3.5 py-1.5 text-xs font-medium text-gray-800 focus:outline-none cursor-pointer"
+      >
+        <option value="fusion">Claude × Gemini × GPT + Leo</option>
+        <option value="claude">Claude 3.7 Sonnet</option>
+        <option value="gemini">Gemini 2.5 Pro</option>
+        <option value="gpt">GPT-4o</option>
+        <option value="leo">Leo Star</option>
+      </select>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-5 py-6 flex flex-col items-center justify-between max-w-lg mx-auto w-full">
+      <div class="flex-1 flex flex-col items-center justify-center text-center my-4">
+        <div
+          id="live-orb"
+          class="w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg live-orb-active transition-transform"
+        >
+          <div id="live-waveform" class="flex items-center justify-center gap-2 h-14">
+            <span class="live-wave-bar w-2 h-8 rounded-full bg-white/95" style="animation-delay: 0s"></span>
+            <span class="live-wave-bar w-2 h-14 rounded-full bg-white" style="animation-delay: 0.15s"></span>
+            <span class="live-wave-bar w-2 h-11 rounded-full bg-white/95" style="animation-delay: 0.3s"></span>
+            <span class="live-wave-bar w-2 h-7 rounded-full bg-white/90" style="animation-delay: 0.45s"></span>
+          </div>
+        </div>
+
+        <p id="live-phase-label" class="mt-6 text-xs font-semibold uppercase tracking-wider text-cosmo-blue">
+          Listening
+        </p>
+        <p id="live-caption" dir="auto" class="mt-2 text-base sm:text-lg font-medium text-gray-900 leading-snug max-w-sm">
+          Speak naturally to Cosmo AI...
+        </p>
+      </div>
+
+      <div
+        id="live-transcript-feed"
+        class="w-full max-h-40 overflow-y-auto rounded-2xl bg-gray-50 border border-gray-100 p-3 space-y-2 text-xs"
+      >
+        <p class="text-center text-gray-400 py-2">Live voice transcript appears here.</p>
+      </div>
+    </div>
+
+    <div class="px-4 sm:px-6 pb-6 pt-3 border-t border-gray-100 bg-white shrink-0">
+      <div class="max-w-lg mx-auto space-y-3">
+        <form id="live-text-form" class="flex items-center gap-2 bg-gray-100 rounded-full px-3.5 py-1.5">
+          <input
+            id="live-text-input"
+            type="text"
+            dir="auto"
+            placeholder="Or type into live chat..."
+            class="flex-1 bg-transparent text-xs sm:text-sm text-gray-900 placeholder-gray-500 focus:outline-none py-1"
+          />
+          <button
+            type="submit"
+            class="w-8 h-8 rounded-full bg-cosmo-blue hover:bg-cosmo-blueHover text-white flex items-center justify-center transition cursor-pointer shrink-0"
+            title="Send in Live Mode"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="19" x2="12" y2="5" />
+              <polyline points="6 11 12 5 18 11" />
+            </svg>
+          </button>
+        </form>
+
+        <div class="flex items-center justify-center gap-5">
+          <button
+            id="live-mic-toggle"
+            type="button"
+            class="w-13 h-13 p-3.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center justify-center transition cursor-pointer"
+            title="Pause / Resume Mic"
+          >
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" y1="19" x2="12" y2="22" />
+            </svg>
+          </button>
+
+          <button
+            id="live-barge-in-btn"
+            type="button"
+            class="px-4 py-2.5 rounded-full bg-cosmo-skyBg hover:bg-blue-100 text-cosmo-blue text-xs font-semibold transition cursor-pointer"
+          >
+            Interrupt
+          </button>
+
+          <button
+            id="close-live-btn"
+            type="button"
+            class="w-13 h-13 p-3.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-sm transition cursor-pointer"
+            title="End Live Chat"
+            aria-label="End Live Chat"
+          >
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- APPLICATION SCRIPT AT END OF BODY                                       -->
+  <!-- ======================================================================= -->
+  <script>
+    (function () {
+      'use strict';
+
+      // =====================================================================
+      // 1. LocalStorage Keys & One-Time API Key Lock
+      // =====================================================================
+      const STORAGE_KEYS = {
+        CHATS: 'cosmo_v3_chats',
+        ACTIVE_CHAT: 'cosmo_v3_active_chat',
+        SETTINGS: 'cosmo_v3_settings',
+        API_KEY: 'cosmo_openrouter_api_key',
+        API_KEY_LOCKED: 'cosmo_api_key_locked',
+      };
+
+      const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+      const DEFAULT_SYSTEM_PROMPT =
+        'You are Cosmo AI (Claude × Gemini × GPT + Leo). Combine Claude’s calm editorial clarity, Gemini’s structured multi-angle synthesis, GPT’s technical precision, and Leo Star’s imaginative insight. Respond in the exact language the user writes in (such as English or Urdu).';
+
+      const LENS_PRESETS = {
+        fusion: {
+          label: 'Cosmo Plus',
+          short: 'Fusion',
+          model: 'openrouter/auto',
+          prompt: 'Blend Claude nuance, Gemini structure, GPT rigor, and Leo Star creativity.',
+        },
+        claude: {
+          label: 'Claude 3.7',
+          short: 'Claude',
+          model: 'anthropic/claude-3.7-sonnet',
+          prompt: 'Channel Claude 3.7 Sonnet: thoughtful, clear, articulate, and nuanced.',
+        },
+        gemini: {
+          label: 'Gemini 2.5',
+          short: 'Gemini',
+          model: 'google/gemini-2.5-pro-exp-03-25:free',
+          prompt: 'Channel Gemini: structured, fast, and comprehensive.',
+        },
+        gpt: {
+          label: 'GPT-4o',
+          short: 'GPT-4o',
+          model: 'openai/gpt-4o',
+          prompt: 'Channel GPT-4o: crisp engineering precision and practical clarity.',
+        },
+        leo: {
+          label: 'Leo Star',
+          short: 'Leo Star',
+          model: 'openrouter/auto',
+          prompt: 'Channel Leo Star: bold first-principles reasoning and vivid analogies.',
+        },
+      };
+
+      const DEFAULT_SETTINGS = {
+        accountName: 'Shahzad Anjum',
+        workspace: 'Personal',
+        lens: 'fusion',
+        model: 'openrouter/auto',
+        leoThinking: true,
+        autoSpeak: false,
+        speechRate: 1.0,
+        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+      };
+
+      // =====================================================================
+      // 2. State Initialization
+      // =====================================================================
+      let state = {
+        settings: loadSettings(),
+        chats: loadChats(),
+        activeChatId: null,
+        sidebarSearchQuery: '',
+        showAllSidebarChats: false,
+        isGenerating: false,
+        abortController: null,
+        live: {
+          active: false,
+          listening: false,
+          speaking: false,
+          transcript: [],
+        },
+      };
+
+      if (!Array.isArray(state.chats) || state.chats.length === 0) {
+        const fresh = createChat();
+        state.chats = [fresh];
+        state.activeChatId = fresh.id;
+        saveChats();
+        saveActiveChatId();
+      } else {
+        const savedId = localStorage.getItem(STORAGE_KEYS.ACTIVE_CHAT);
+        state.activeChatId = state.chats.some((c) => c.id === savedId) ? savedId : state.chats[0].id;
+      }
+
+      // =====================================================================
+      // 3. DOM Element References
+      // =====================================================================
+      const els = {
+        sidebar: document.getElementById('sidebar'),
+        sidebarBackdrop: document.getElementById('sidebar-backdrop'),
+        menuToggleBtn: document.getElementById('menu-toggle-btn'),
+        sidebarSearchToggle: document.getElementById('sidebar-search-toggle'),
+        sidebarSearchBar: document.getElementById('sidebar-search-bar'),
+        sidebarSearchInput: document.getElementById('sidebar-search-input'),
+        sidebarSearchClear: document.getElementById('sidebar-search-clear'),
+        chatHistoryList: document.getElementById('chat-history-list'),
+        seeAllChatsBtn: document.getElementById('see-all-chats-btn'),
+        sidebarNewChatBtn: document.getElementById('sidebar-new-chat-btn'),
+        sidebarProfileSettingsBtn: document.getElementById('sidebar-profile-settings-btn'),
+        sidebarKeyNeededDot: document.getElementById('sidebar-key-needed-dot'),
+        // Main Header & Chat
+        cosmoPlusPill: document.getElementById('cosmo-plus-pill'),
+      headerNewChatBtn: document.getElementById('header-new-chat-btn'),
+      toastBanner: document.getElementById('toast-banner'),
+      mainApiSetupCard: document.getElementById('main-api-setup-card'),
+      mainApiSetupForm: document.getElementById('main-api-setup-form'),
+      mainApiSetupInput: document.getElementById('main-api-setup-input'),
+      messagesContainer: document.getElementById('messages-container'),
+        emptyState: document.getElementById('empty-state'),
+        messageList: document.getElementById('message-list'),
+        plusPopover: document.getElementById('plus-popover'),
+        plusBtn: document.getElementById('plus-btn'),
+        popoverToggleLeo: document.getElementById('popover-toggle-leo'),
+        popoverLeoState: document.getElementById('popover-leo-state'),
+        popoverOpenCustomize: document.getElementById('popover-open-customize'),
+        popoverLensName: document.getElementById('popover-lens-name'),
+        popoverAttachFile: document.getElementById('popover-attach-file'),
+        hiddenFileInput: document.getElementById('hidden-file-input'),
+        chatForm: document.getElementById('chat-form'),
+        promptInput: document.getElementById('prompt-input'),
+        dictateBtn: document.getElementById('dictate-btn'),
+        dictateMicSvg: document.getElementById('dictate-mic-svg'),
+        blueActionBtn: document.getElementById('blue-action-btn'),
+        iconWave: document.getElementById('icon-wave'),
+        iconSend: document.getElementById('icon-send'),
+        iconStop: document.getElementById('icon-stop'),
+        // Settings Screen
+        settingsScreen: document.getElementById('settings-screen'),
+        settingsBackBtn: document.getElementById('settings-back-btn'),
+        settingsInfoBtn: document.getElementById('settings-info-btn'),
+        oneTimeApiCard: document.getElementById('one-time-api-card'),
+        oneTimeApiForm: document.getElementById('one-time-api-form'),
+        oneTimeApiInput: document.getElementById('one-time-api-input'),
+        settingsAvatarInitials: document.getElementById('settings-avatar-initials'),
+        settingsAccountName: document.getElementById('settings-account-name'),
+        settingsWorkspaceLabel: document.getElementById('settings-workspace-label'),
+        settingsCustomizeSub: document.getElementById('settings-customize-sub'),
+        settingsSearchInput: document.getElementById('settings-search-input'),
+        // Sub-sheet Modal
+        subSheetModal: document.getElementById('sub-sheet-modal'),
+        subSheetTitle: document.getElementById('sub-sheet-title'),
+        subSheetBody: document.getElementById('sub-sheet-body'),
+        closeSubSheetBtn: document.getElementById('close-sub-sheet-btn'),
+        // Go Live Overlay
+        goLiveOverlay: document.getElementById('go-live-overlay'),
+        liveLensSelect: document.getElementById('live-lens-select'),
+        liveOrb: document.getElementById('live-orb'),
+        liveWaveform: document.getElementById('live-waveform'),
+        livePhaseLabel: document.getElementById('live-phase-label'),
+        liveCaption: document.getElementById('live-caption'),
+        liveTranscriptFeed: document.getElementById('live-transcript-feed'),
+        liveTextForm: document.getElementById('live-text-form'),
+        liveTextInput: document.getElementById('live-text-input'),
+        liveMicToggle: document.getElementById('live-mic-toggle'),
+        liveBargeInBtn: document.getElementById('live-barge-in-btn'),
+        closeLiveBtn: document.getElementById('close-live-btn'),
+      };
+
+      // =====================================================================
+      // 4. One-Time OpenRouter API Key Check & Permanent Removal
+      // =====================================================================
+      function isApiKeyLocked() {
+        try {
+          const locked = localStorage.getItem(STORAGE_KEYS.API_KEY_LOCKED) === 'true';
+          const savedKey = (localStorage.getItem(STORAGE_KEYS.API_KEY) || '').trim();
+          return locked && savedKey.length > 0;
+        } catch (_e) {
+          return false;
+        }
+      }
+
+      function getSavedOpenRouterKey() {
+        try {
+          return (localStorage.getItem(STORAGE_KEYS.API_KEY) || '').trim();
+        } catch (_e) {
+          return '';
+        }
+      }
+
+      /**
+       * Enforces the strict one-time API key rule:
+       * Once locked, permanently deletes both main-screen and settings API Key DOM cards
+       * so they never render again even after page reload.
+       */
+      function enforceOneTimeApiKeyVisibility() {
+        const locked = isApiKeyLocked();
+        if (locked) {
+          if (els.mainApiSetupCard && els.mainApiSetupCard.parentNode) {
+            els.mainApiSetupCard.parentNode.removeChild(els.mainApiSetupCard);
+          }
+          if (els.oneTimeApiCard && els.oneTimeApiCard.parentNode) {
+            els.oneTimeApiCard.parentNode.removeChild(els.oneTimeApiCard);
+          }
+          if (els.sidebarKeyNeededDot) {
+            els.sidebarKeyNeededDot.classList.add('hidden');
+          }
+        } else {
+          if (els.mainApiSetupCard) {
+            els.mainApiSetupCard.classList.remove('hidden');
+          }
+          if (els.sidebarKeyNeededDot) {
+            els.sidebarKeyNeededDot.classList.remove('hidden');
+          }
+        }
+      }
+
+      // =====================================================================
+      // 5. LocalStorage Helpers
+      // =====================================================================
+      function loadSettings() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+          if (!raw) return { ...DEFAULT_SETTINGS };
+          const p = JSON.parse(raw);
+          const lens = LENS_PRESETS[p.lens] ? p.lens : 'fusion';
+          return {
+            accountName: typeof p.accountName === 'string' && p.accountName.trim() ? p.accountName.trim() : 'Shahzad Anjum',
+            workspace: typeof p.workspace === 'string' && p.workspace.trim() ? p.workspace.trim() : 'Personal',
+            lens,
+            model: typeof p.model === 'string' && p.model.trim() ? p.model.trim() : LENS_PRESETS[lens].model,
+            leoThinking: typeof p.leoThinking === 'boolean' ? p.leoThinking : true,
+            autoSpeak: Boolean(p.autoSpeak),
+            speechRate: typeof p.speechRate === 'number' ? p.speechRate : 1.0,
+            systemPrompt:
+              typeof p.systemPrompt === 'string' && p.systemPrompt.trim()
+                ? p.systemPrompt
+                : DEFAULT_SYSTEM_PROMPT,
+          };
+        } catch (_e) {
+          return { ...DEFAULT_SETTINGS };
+        }
+      }
+
+      function saveSettings() {
+        try {
+          localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(state.settings));
+        } catch (_e) {}
+      }
+
+      function loadChats() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEYS.CHATS);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (_e) {
+          return [];
+        }
+      }
+
+      function saveChats() {
+        try {
+          localStorage.setItem(STORAGE_KEYS.CHATS, JSON.stringify(state.chats));
+        } catch (_e) {}
+      }
+
+      function saveActiveChatId() {
+        try {
+          if (state.activeChatId) {
+            localStorage.setItem(STORAGE_KEYS.ACTIVE_CHAT, state.activeChatId);
+          }
+        } catch (_e) {}
+      }
+
+      function getInitials(name) {
+        const parts = String(name || 'SA')
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean);
+        if (parts.length === 0) return 'SA';
+        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      }
+
+      // =====================================================================
+      // 6. Dynamic Blue Circular Action Button (Waveform <-> Send <-> Stop)
+      // =====================================================================
+      function syncBlueActionButton() {
+        const hasText = els.promptInput.value.trim().length > 0;
+        els.iconWave.classList.add('hidden');
+        els.iconSend.classList.add('hidden');
+        els.iconStop.classList.add('hidden');
+
+        if (state.isGenerating) {
+          els.blueActionBtn.dataset.mode = 'stop';
+          els.blueActionBtn.title = 'Stop generating';
+          els.iconStop.classList.remove('hidden');
+        } else if (hasText) {
+          els.blueActionBtn.dataset.mode = 'send';
+          els.blueActionBtn.title = 'Send message';
+          els.iconSend.classList.remove('hidden');
+        } else {
+          els.blueActionBtn.dataset.mode = 'live';
+          els.blueActionBtn.title = 'Go Live Voice Chat';
+          els.iconWave.classList.remove('hidden');
+        }
+      }
+
+      // =====================================================================
+      // 7. Chat Management
+      // =====================================================================
+      function createChat() {
+        return {
+          id: 'chat_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
+          title: 'New Chat',
+          updatedAt: Date.now(),
+          messages: [],
+        };
+      }
+
+      function getActiveChat() {
+        return state.chats.find((c) => c.id === state.activeChatId) || state.chats[0];
+      }
+
+      function startNewChat() {
+        stopActiveStream();
+        stopSpeechSynthesis();
+        const active = getActiveChat();
+        if (active && active.messages.length === 0) {
+          els.promptInput.value = '';
+          autoResizeTextarea();
+          syncBlueActionButton();
+          closeSidebar();
+          els.promptInput.focus();
+          return;
+        }
+        const fresh = createChat();
+        state.chats.unshift(fresh);
+        state.activeChatId = fresh.id;
+        saveChats();
+        saveActiveChatId();
+        renderAll();
+        closeSidebar();
+        els.promptInput.focus();
+      }
+
+      function selectChat(chatId) {
+        if (chatId === state.activeChatId) {
+          closeSidebar();
+          return;
+        }
+        stopActiveStream();
+        stopSpeechSynthesis();
+        state.activeChatId = chatId;
+        saveActiveChatId();
+        renderAll();
+        closeSidebar();
+      }
+
+      function deleteChat(chatId) {
+        const idx = state.chats.findIndex((c) => c.id === chatId);
+        if (idx === -1) return;
+        if (chatId === state.activeChatId) {
+          stopActiveStream();
+          stopSpeechSynthesis();
+        }
+        state.chats.splice(idx, 1);
+        if (state.chats.length === 0) {
+          const fresh = createChat();
+          state.chats.push(fresh);
+          state.activeChatId = fresh.id;
+        } else if (state.activeChatId === chatId) {
+          state.activeChatId = state.chats[0].id;
+        }
+        saveChats();
+        saveActiveChatId();
+        renderAll();
+      }
+
+      // =====================================================================
+      // 8. Leo Star Thinking Extraction & Markdown Renderer
+      // =====================================================================
+      function extractLeoThinking(raw) {
+        if (!raw) return { thinking: '', answer: '' };
+        let thinking = [];
+        let clean = String(raw).replace(/<leo_thinking>([\s\S]*?)<\/leo_thinking>/gi, (_m, inner) => {
+          if (inner && inner.trim()) thinking.push(inner.trim());
+          return '';
+        });
+
+        const openIdx = clean.toLowerCase().indexOf('<leo_thinking>');
+        if (openIdx !== -1) {
+          const partial = clean.slice(openIdx + 14).trim();
+          if (partial) thinking.push(partial);
+          clean = clean.slice(0, openIdx);
+        }
+
+        return {
+          thinking: thinking.join('\n\n').trim(),
+          answer: clean.trim(),
+        };
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function formatInline(text) {
+        let out = escapeHtml(text);
+        out = out.replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>');
+        out = out.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>');
+        out = out.replace(/__([^_]+)__/g, '<strong class="font-semibold text-gray-900">$1</strong>');
+        out = out.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em class="italic">$2</em>');
+        out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_m, label, url) => {
+          return `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+        });
+        return out;
+      }
+
+      function renderMarkdown(rawText) {
+        if (!rawText) return '';
+        const codeRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
+        const segments = [];
+        let lastIdx = 0;
+        let match;
+
+        while ((match = codeRegex.exec(rawText)) !== null) {
+          if (match.index > lastIdx) {
+            segments.push({ type: 'text', content: rawText.slice(lastIdx, match.index) });
+          }
+          segments.push({
+            type: 'code',
+            lang: (match[1] || 'code').trim(),
+            content: match[2].replace(/\n$/, ''),
+          });
+          lastIdx = codeRegex.lastIndex;
+        }
+        if (lastIdx < rawText.length) {
+          segments.push({ type: 'text', content: rawText.slice(lastIdx) });
+        }
+
+        return segments
+          .map((seg) => {
+            if (seg.type === 'code') {
+              const encoded = encodeURIComponent(seg.content);
+              return `
+                <div dir="ltr" class="my-3 rounded-2xl overflow-hidden border border-gray-800 bg-gray-900 text-gray-100">
+                  <div class="px-3.5 py-2 bg-gray-800 flex items-center justify-between text-[11px]">
+                    <span class="font-mono uppercase tracking-wider text-gray-300">${escapeHtml(seg.lang)}</span>
+                    <button type="button" data-copy-code="${encoded}" class="copy-code-btn px-2 py-0.5 rounded-md text-gray-200 hover:bg-gray-700 transition cursor-pointer">
+                      Copy
+                    </button>
+                  </div>
+                  <pre class="p-3.5 overflow-x-auto text-xs font-mono leading-relaxed"><code>${escapeHtml(seg.content)}</code></pre>
+                </div>
+              `;
+            }
+
+            const lines = seg.content.split('\n');
+            let html = '';
+            let inUl = false;
+            let inOl = false;
+            let buf = [];
+
+            const flushP = () => {
+              if (buf.length) {
+                html += `<p dir="auto">${formatInline(buf.join('<br />'))}</p>`;
+                buf = [];
+              }
+            };
+            const closeLists = () => {
+              if (inUl) { html += '</ul>'; inUl = false; }
+              if (inOl) { html += '</ol>'; inOl = false; }
+            };
+
+            for (const line of lines) {
+              const t = line.trim();
+              if (!t) {
+                flushP();
+                closeLists();
+                continue;
+              }
+              const h = t.match(/^(#{1,4})\s+(.*)$/);
+              if (h) {
+                flushP();
+                closeLists();
+                html += `<h${h[1].length} dir="auto">${formatInline(h[2])}</h${h[1].length}>`;
+                continue;
+              }
+              const q = t.match(/^>\s?(.*)$/);
+              if (q) {
+                flushP();
+                closeLists();
+                html += `<blockquote dir="auto">${formatInline(q[1])}</blockquote>`;
+                continue;
+              }
+              const ul = t.match(/^[-*+]\s+(.*)$/);
+              if (ul) {
+                flushP();
+                if (inOl) { html += '</ol>'; inOl = false; }
+                if (!inUl) { html += '<ul dir="auto">'; inUl = true; }
+                html += `<li>${formatInline(ul[1])}</li>`;
+                continue;
+              }
+              const ol = t.match(/^\d+\.\s+(.*)$/);
+              if (ol) {
+                flushP();
+                if (inUl) { html += '</ul>'; inUl = false; }
+                if (!inOl) { html += '<ol dir="auto">'; inOl = true; }
+                html += `<li>${formatInline(ol[1])}</li>`;
+                continue;
+              }
+              closeLists();
+              buf.push(line);
+            }
+            flushP();
+            closeLists();
+            return html;
+          })
+          .join('');
+      }
+
+      // =====================================================================
+      // 9. Rendering UI
+      // =====================================================================
+      function renderAll() {
+        enforceOneTimeApiKeyVisibility();
+        renderSidebarHistory();
+        renderProfileAndHeaders();
+        renderMessages();
+        syncBlueActionButton();
+      }
+
+      function renderProfileAndHeaders() {
+        const lens = LENS_PRESETS[state.settings.lens] || LENS_PRESETS.fusion;
+        els.headerPillLabel.textContent = lens.label;
+        els.popoverLeoState.textContent = state.settings.leoThinking ? 'ON' : 'OFF';
+        els.popoverLensName.textContent = lens.short;
+
+        const initials = getInitials(state.settings.accountName);
+        els.sidebarAvatarInitials.textContent = initials;
+        els.settingsAvatarInitials.textContent = initials;
+        els.settingsAccountName.textContent = state.settings.accountName;
+        els.settingsWorkspaceLabel.textContent = state.settings.workspace;
+        els.settingsCustomizeSub.textContent = `${lens.label} · Leo Star ${state.settings.leoThinking ? 'On' : 'Off'}`;
+        els.liveLensSelect.value = state.settings.lens;
+      }
+
+      function renderSidebarHistory() {
+        const q = (state.sidebarSearchQuery || '').trim().toLowerCase();
+        const sorted = [...state.chats]
+          .filter((c) => (c.messages && c.messages.length > 0) || c.id === state.activeChatId)
+          .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+        const filtered = q
+          ? sorted.filter((c) => (c.title || '').toLowerCase().includes(q))
+          : sorted;
+
+        const visibleLimit = 6;
+        const displayed = state.showAllSidebarChats || q ? filtered : filtered.slice(0, visibleLimit);
+
+        els.chatHistoryList.innerHTML = '';
+
+        for (const chat of displayed) {
+          const isActive = chat.id === state.activeChatId && chat.messages && chat.messages.length > 0;
+          const row = document.createElement('div');
+          row.className = `group flex items-center justify-between gap-2 px-3 py-2.5 rounded-2xl transition ${
+            isActive ? 'bg-gray-100 font-medium text-gray-900' : 'text-gray-800 hover:bg-gray-100/70'
+          }`;
+
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.setAttribute('dir', 'auto');
+          btn.className = 'flex-1 min-w-0 text-left truncate text-[16px] leading-snug cursor-pointer';
+          btn.textContent = chat.title || 'New Chat';
+          btn.addEventListener('click', () => selectChat(chat.id));
+
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.title = 'Delete chat';
+          delBtn.className =
+            'p-1 rounded-lg text-gray-400 hover:text-rose-600 opacity-0 group-hover:opacity-100 focus:opacity-100 transition cursor-pointer shrink-0';
+          delBtn.innerHTML = '✕';
+          delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteChat(chat.id);
+          });
+
+          row.appendChild(btn);
+          row.appendChild(delBtn);
+          els.chatHistoryList.appendChild(row);
+        }
+
+        if (!q && filtered.length > visibleLimit) {
+          els.seeAllChatsBtn.classList.remove('hidden');
+          els.seeAllChatsBtn.textContent = state.showAllSidebarChats ? 'Show less' : 'See all...';
+        } else {
+          els.seeAllChatsBtn.classList.add('hidden');
+        }
+      }
+
+      function renderMessages() {
+        const chat = getActiveChat();
+        const msgs = chat && Array.isArray(chat.messages) ? chat.messages : [];
+        els.messageList.innerHTML = '';
+
+        if (msgs.length === 0 && !state.isGenerating) {
+          els.emptyState.classList.remove('hidden');
+          els.messageList.classList.add('hidden');
+          return;
+        }
+
+        els.emptyState.classList.add('hidden');
+        els.messageList.classList.remove('hidden');
+
+        for (const msg of msgs) {
+          els.messageList.appendChild(buildMessageNode(msg));
+        }
+        scrollToBottom();
+      }
+
+      function buildMessageNode(msg) {
+        const isUser = msg.role === 'user';
+        const wrap = document.createElement('div');
+        wrap.className = `flex ${isUser ? 'justify-end' : 'justify-start'} items-start gap-2.5`;
+        if (msg.id) wrap.dataset.messageId = msg.id;
+
+        if (!isUser) {
+          const badge = document.createElement('div');
+          badge.className =
+            'w-7 h-7 rounded-full bg-cosmo-skyBg text-cosmo-blue flex items-center justify-center shrink-0 mt-0.5';
+          badge.innerHTML = `
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
+            </svg>
+          `;
+          wrap.appendChild(badge);
+        }
+
+        const col = document.createElement('div');
+        col.className = `${isUser ? 'max-w-[82%] sm:max-w-[74%]' : 'flex-1 min-w-0'} space-y-2`;
+
+        if (isUser) {
+          const bubble = document.createElement('div');
+          bubble.setAttribute('dir', 'auto');
+          bubble.className =
+            'px-4 py-2.5 rounded-3xl rounded-br-md bg-gray-100 text-gray-900 text-[15px] leading-relaxed whitespace-pre-wrap break-words';
+          bubble.textContent = msg.content;
+          col.appendChild(bubble);
+        } else {
+          const { thinking, answer } = extractLeoThinking(msg.content || '');
+
+          if (thinking) {
+            const drawer = document.createElement('details');
+            drawer.className =
+              'leo-thinking-drawer rounded-2xl bg-blue-50/70 border border-blue-100 overflow-hidden';
+            if (msg.isStreaming) drawer.open = true;
+            drawer.innerHTML = `
+              <summary class="px-3.5 py-2 text-xs font-medium text-cosmo-blue cursor-pointer select-none flex items-center justify-between">
+                <span class="inline-flex items-center gap-1.5">
+                  <span>✦</span>
+                  <span>Leo Star Thinking</span>
+                </span>
+                <span class="text-[10px] text-blue-500">Reasoning</span>
+              </summary>
+              <div class="leo-thinking-body px-3.5 pb-3 pt-1 text-xs text-gray-700 message-prose border-t border-blue-100/80">
+                ${renderMarkdown(thinking)}
+              </div>
+            `;
+            col.appendChild(drawer);
+          }
+
+          const answerEl = document.createElement('div');
+          answerEl.className = 'assistant-answer-body text-[15px] text-gray-800 message-prose overflow-x-auto';
+          if (!answer && msg.isStreaming) {
+            answerEl.innerHTML = `
+              <div class="flex items-center gap-1.5 py-2">
+                <span class="typing-dot w-2 h-2 rounded-full bg-cosmo-blue"></span>
+                <span class="typing-dot w-2 h-2 rounded-full bg-blue-400"></span>
+                <span class="typing-dot w-2 h-2 rounded-full bg-gray-300"></span>
+              </div>
+            `;
+          } else {
+            answerEl.innerHTML = renderMarkdown(answer);
+          }
+          col.appendChild(answerEl);
+
+          if (!msg.isStreaming && msg.content) {
+            const actions = document.createElement('div');
+            actions.className = 'flex items-center gap-2 pt-0.5 text-[11px] text-gray-400';
+
+            const speakBtn = document.createElement('button');
+            speakBtn.type = 'button';
+            speakBtn.className = 'hover:text-gray-700 transition cursor-pointer';
+            speakBtn.textContent = 'Listen';
+            speakBtn.addEventListener('click', () => speakText(answer || msg.content));
+
+            const copyBtn = document.createElement('button');
+            copyBtn.type = 'button';
+            copyBtn.className = 'hover:text-gray-700 transition cursor-pointer';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', () => copyToClipboard(answer || msg.content, copyBtn));
+
+            actions.appendChild(speakBtn);
+            actions.appendChild(document.createTextNode('·'));
+            actions.appendChild(copyBtn);
+            col.appendChild(actions);
+          }
+        }
+
+        wrap.appendChild(col);
+        return wrap;
+      }
+
+      function scrollToBottom() {
+        requestAnimationFrame(() => {
+          els.messagesContainer.scrollTop = els.messagesContainer.scrollHeight;
+        });
+      }
+
+      // =====================================================================
+      // 10. OpenRouter Streaming Chat Completion
+      // =====================================================================
+      function buildSystemPrompt() {
+        const base = (state.settings.systemPrompt || DEFAULT_SYSTEM_PROMPT).trim();
+        const lens = LENS_PRESETS[state.settings.lens] || LENS_PRESETS.fusion;
+        const leoRule = state.settings.leoThinking
+          ? 'Always begin your response with a concise reasoning block inside <leo_thinking>...</leo_thinking> tags, then write your clear final response outside the tags.'
+          : '';
+        return [base, lens.prompt, leoRule].filter(Boolean).join('\n\n');
+      }
+
+      function stopActiveStream() {
+        if (state.isGenerating && state.abortController) {
+          state.abortController.abort();
+        }
+      }
+
+      async function sendPrompt(rawText, options = {}) {
+        const { speakReply = state.settings.autoSpeak, fromLive = false } = options;
+        const prompt = (rawText || '').trim();
+        if (!prompt || state.isGenerating) return '';
+
+        const apiKey = getSavedOpenRouterKey();
+        if (!apiKey) {
+          showToast('Please enter your one-time OpenRouter API key in Settings.', 'error');
+          openSettingsScreen(true);
+          return '';
+        }
+
+        const chat = getActiveChat();
+        if (!chat) return '';
+
+        if (chat.messages.length === 0) {
+          chat.title = prompt.length > 36 ? prompt.slice(0, 36).trim() + '…' : prompt;
+        }
+
+        const userMsg = {
+          id: 'u_' + Date.now().toString(36),
+          role: 'user',
+          content: prompt,
+        };
+        const aiMsg = {
+          id: 'a_' + Date.now().toString(36),
+          role: 'assistant',
+          content: '',
+          isStreaming: true,
+        };
+
+        chat.messages.push(userMsg, aiMsg);
+        chat.updatedAt = Date.now();
+        saveChats();
+
+        if (!fromLive) {
+          els.promptInput.value = '';
+          autoResizeTextarea();
+        }
+
+        state.isGenerating = true;
+        syncBlueActionButton();
+        renderSidebarHistory();
+        renderMessages();
+
+        const apiMessages = [
+          { role: 'system', content: buildSystemPrompt() },
+          ...chat.messages
+            .filter((m) => m.id !== aiMsg.id && m.content)
+            .map((m) => ({
+              role: m.role === 'assistant' ? 'assistant' : 'user',
+              content: m.content,
+            })),
+        ];
+
+        state.abortController = new AbortController();
+
+        try {
+          const res = await fetch(OPENROUTER_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${apiKey}`,
+              'HTTP-Referer': window.location.origin || 'https://cosmo.ai',
+              'X-Title': 'Cosmo AI',
+            },
+            body: JSON.stringify({
+              model: state.settings.model || 'openrouter/auto',
+              messages: apiMessages,
+              stream: true,
+            }),
+            signal: state.abortController.signal,
+          });
+
+          if (!res.ok) {
+            let errMsg = `OpenRouter Error (${res.status})`;
+            try {
+              const j = await res.json();
+              if (j && j.error && j.error.message) errMsg = j.error.message;
+            } catch (_e) {}
+            throw new Error(errMsg);
+          }
+
+          const ct = res.headers.get('content-type') || '';
+          if (res.body && ct.includes('text/event-stream')) {
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buf = '';
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buf += decoder.decode(value, { stream: true });
+              const lines = buf.split('\n');
+              buf = lines.pop() || '';
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || !trimmed.startsWith('data:')) continue;
+                const payload = trimmed.slice(5).trim();
+                if (payload === '[DONE]') break;
+                try {
+                  const parsed = JSON.parse(payload);
+                  const delta = parsed?.choices?.[0]?.delta?.content;
+                  if (typeof delta === 'string' && delta) {
+                    aiMsg.content += delta;
+                    updateStreamingDom(aiMsg);
+                  }
+                } catch (_e) {}
+              }
+            }
+          } else {
+            const data = await res.json();
+            aiMsg.content = data?.choices?.[0]?.message?.content || 'No response returned.';
+          }
+
+          aiMsg.isStreaming = false;
+          chat.updatedAt = Date.now();
+          saveChats();
+          renderMessages();
+
+          const { answer } = extractLeoThinking(aiMsg.content);
+          const spoken = answer || aiMsg.content;
+          if (speakReply && spoken) speakText(spoken, { fromLive });
+          return spoken;
+        } catch (err) {
+          aiMsg.isStreaming = false;
+          if (err && err.name === 'AbortError') {
+            aiMsg.content = aiMsg.content ? aiMsg.content + '\n\n_Stopped._' : '_Stopped._';
+          } else {
+            aiMsg.content = `Error: ${err?.message || 'Unable to connect to OpenRouter.'}`;
+            showToast(aiMsg.content, 'error');
+          }
+          saveChats();
+          renderMessages();
+          return '';
+        } finally {
+          state.abortController = null;
+          state.isGenerating = false;
+          syncBlueActionButton();
+        }
+      }
+
+      function updateStreamingDom(msg) {
+        const node = els.messageList.querySelector(`[data-message-id="${msg.id}"]`);
+        if (!node) {
+          renderMessages();
+          return;
+        }
+        const { thinking, answer } = extractLeoThinking(msg.content || '');
+        const answerBody = node.querySelector('.assistant-answer-body');
+        if (answerBody) {
+          answerBody.innerHTML = answer ? renderMarkdown(answer) : '';
+        }
+        if (thinking) {
+          let drawer = node.querySelector('.leo-thinking-drawer');
+          if (!drawer) {
+            const col = node.querySelector('div.flex-1');
+            if (col && answerBody) {
+              drawer = document.createElement('details');
+              drawer.open = true;
+              drawer.className =
+                'leo-thinking-drawer rounded-2xl bg-blue-50/70 border border-blue-100 overflow-hidden mb-2';
+              drawer.innerHTML = `
+                <summary class="px-3.5 py-2 text-xs font-medium text-cosmo-blue cursor-pointer select-none flex items-center justify-between">
+                  <span class="inline-flex items-center gap-1.5"><span>✦</span><span>Leo Star Thinking</span></span>
+                  <span class="text-[10px] text-blue-500">Reasoning</span>
+                </summary>
+                <div class="leo-thinking-body px-3.5 pb-3 pt-1 text-xs text-gray-700 message-prose border-t border-blue-100/80"></div>
+              `;
+              col.insertBefore(drawer, answerBody);
+            }
+          }
+          const body = drawer ? drawer.querySelector('.leo-thinking-body') : null;
+          if (body) body.innerHTML = renderMarkdown(thinking);
+        }
+        scrollToBottom();
+      }
+
+      // =====================================================================
+      // 11. Voice Dictation & Go Live Voice Mode
+      // =====================================================================
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+      const synth = window.speechSynthesis || null;
+      let dictateRec = null;
+      let liveRec = null;
+
+      function toggleDictation() {
+        if (!SpeechRec) {
+          showToast('Voice dictation is not supported in this browser.', 'error');
+          return;
+        }
+        if (dictateRec) {
+          try { dictateRec.stop(); } catch (_e) {}
+          return;
+        }
+
+        const baseText = els.promptInput.value.trim();
+        const rec = new SpeechRec();
+        rec.continuous = false;
+        rec.interimResults = true;
+        rec.lang = navigator.language || 'en-US';
+
+        rec.onstart = () => {
+          dictateRec = rec;
+          els.dictateBtn.classList.add('bg-rose-50', 'text-rose-600', 'ring-2', 'ring-rose-300');
+          els.dictateMicSvg.classList.add('animate-pulse');
+        };
+
+        rec.onresult = (e) => {
+          let transcript = '';
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            transcript += e.results[i][0]?.transcript || '';
+          }
+          els.promptInput.value = [baseText, transcript.trim()].filter(Boolean).join(' ');
+          autoResizeTextarea();
+          syncBlueActionButton();
+        };
+
+        rec.onerror = (e) => {
+          if (e?.error !== 'aborted') showToast(`Mic error: ${e?.error || 'unavailable'}`, 'error');
+        };
+
+        rec.onend = () => {
+          dictateRec = null;
+          els.dictateBtn.classList.remove('bg-rose-50', 'text-rose-600', 'ring-2', 'ring-rose-300');
+          els.dictateMicSvg.classList.remove('animate-pulse');
+          syncBlueActionButton();
+        };
+
+        try {
+          rec.start();
+        } catch (_e) {
+          dictateRec = null;
+          showToast('Microphone permission denied.', 'error');
+        }
+      }
+
+      function stopSpeechSynthesis() {
+        try {
+          if (synth && synth.speaking) synth.cancel();
+        } catch (_e) {}
+        state.live.speaking = false;
+        updateLiveAnim();
+      }
+
+      function speakText(text, { fromLive = false } = {}) {
+        if (!synth || typeof SpeechSynthesisUtterance === 'undefined') return;
+        const clean = String(text)
+          .replace(/```[\s\S]*?```/g, ' code omitted ')
+          .replace(/[#*`_>~-]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 1000);
+        if (!clean) return;
+
+        stopSpeechSynthesis();
+        try {
+          const u = new SpeechSynthesisUtterance(clean);
+          u.rate = state.settings.speechRate || 1.0;
+          u.onstart = () => {
+            state.live.speaking = true;
+            updateLiveAnim();
+            if (fromLive) {
+              els.livePhaseLabel.textContent = 'Speaking';
+              els.liveCaption.textContent = clean.slice(0, 140) + (clean.length > 140 ? '…' : '');
+            }
+          };
+          u.onend = () => {
+            state.live.speaking = false;
+            updateLiveAnim();
+            if (fromLive && state.live.active) {
+              els.livePhaseLabel.textContent = state.live.listening ? 'Listening' : 'Standby';
+            }
+          };
+          u.onerror = () => {
+            state.live.speaking = false;
+            updateLiveAnim();
+          };
+          synth.speak(u);
+        } catch (_e) {}
+      }
+
+      function openGoLive() {
+        if (!getSavedOpenRouterKey()) {
+          showToast('Please set your one-time OpenRouter API key first.', 'error');
+          openSettingsScreen(true);
+          return;
+        }
+        stopActiveStream();
+        if (dictateRec) {
+          try { dictateRec.stop(); } catch (_e) {}
+        }
+        state.live.active = true;
+        state.live.transcript = [];
+        renderLiveFeed();
+        els.goLiveOverlay.classList.remove('hidden');
+        els.goLiveOverlay.classList.add('flex');
+        els.livePhaseLabel.textContent = 'Listening';
+        els.liveCaption.textContent = 'Speak naturally to Cosmo AI...';
+        startLiveMic();
+      }
+
+      function closeGoLive() {
+        state.live.active = false;
+        stopLiveMic();
+        stopSpeechSynthesis();
+        stopActiveStream();
+        els.goLiveOverlay.classList.add('hidden');
+        els.goLiveOverlay.classList.remove('flex');
+        renderAll();
+      }
+
+      function startLiveMic() {
+        if (!state.live.active) return;
+        if (!SpeechRec) {
+          state.live.listening = false;
+          els.livePhaseLabel.textContent = 'Live Text Mode';
+          els.liveCaption.textContent = 'Type below to chat live.';
+          updateLiveAnim();
+          return;
+        }
+        if (liveRec) return;
+
+        const rec = new SpeechRec();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = navigator.language || 'en-US';
+
+        rec.onstart = () => {
+          liveRec = rec;
+          state.live.listening = true;
+          els.livePhaseLabel.textContent = 'Listening';
+          updateLiveAnim();
+        };
+
+        rec.onresult = async (e) => {
+          let interim = '';
+          let finalStr = '';
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const t = e.results[i][0]?.transcript || '';
+            if (e.results[i].isFinal) finalStr += t;
+            else interim += t;
+          }
+          if (interim.trim()) {
+            if (state.live.speaking || state.isGenerating) {
+              stopSpeechSynthesis();
+              stopActiveStream();
+            }
+            els.livePhaseLabel.textContent = 'Hearing you';
+            els.liveCaption.textContent = interim.trim();
+          }
+          if (finalStr.trim() && state.live.active) {
+            const userSay = finalStr.trim();
+            els.liveCaption.textContent = `"${userSay}"`;
+            addLiveEntry('You', userSay);
+            els.livePhaseLabel.textContent = 'Thinking';
+            const reply = await sendPrompt(userSay, { speakReply: true, fromLive: true });
+            if (reply && state.live.active) addLiveEntry('Cosmo AI', reply);
+          }
+        };
+
+        rec.onerror = () => {
+          liveRec = null;
+        };
+
+        rec.onend = () => {
+          liveRec = null;
+          if (state.live.active && state.live.listening) {
+            setTimeout(() => {
+              if (state.live.active && state.live.listening) startLiveMic();
+            }, 220);
+          } else {
+            updateLiveAnim();
+          }
+        };
+
+        try {
+          rec.start();
+        } catch (_e) {
+          liveRec = null;
+          state.live.listening = false;
+          updateLiveAnim();
+        }
+      }
+
+      function stopLiveMic() {
+        state.live.listening = false;
+        if (liveRec) {
+          try { liveRec.stop(); } catch (_e) {}
+          liveRec = null;
+        }
+        updateLiveAnim();
+      }
+
+      function updateLiveAnim() {
+        const running = state.live.listening || state.live.speaking;
+        if (running) {
+          els.liveWaveform.classList.add('live-wave-running');
+          els.liveOrb.classList.add('live-orb-active');
+        } else {
+          els.liveWaveform.classList.remove('live-wave-running');
+          els.liveOrb.classList.remove('live-orb-active');
+        }
+      }
+
+      function addLiveEntry(who, text) {
+        state.live.transcript.push({ who, text });
+        renderLiveFeed();
+      }
+
+      function renderLiveFeed() {
+        if (!state.live.transcript.length) {
+          els.liveTranscriptFeed.innerHTML =
+            '<p class="text-center text-gray-400 py-2">Live voice transcript appears here.</p>';
+          return;
+        }
+        els.liveTranscriptFeed.innerHTML = state.live.transcript
+          .map(
+            (item) => `
+            <div dir="auto" class="rounded-xl px-3 py-2 ${
+              item.who === 'You' ? 'bg-cosmo-skyBg text-gray-900 ml-6' : 'bg-white border border-gray-200/70 mr-6'
+            }">
+              <div class="font-semibold text-[10px] uppercase tracking-wider ${
+                item.who === 'You' ? 'text-cosmo-blue' : 'text-gray-500'
+              }">${escapeHtml(item.who)}</div>
+              <div class="mt-0.5 text-gray-800">${escapeHtml(item.text)}</div>
+            </div>
+          `
+          )
+          .join('');
+        els.liveTranscriptFeed.scrollTop = els.liveTranscriptFeed.scrollHeight;
+      }
+
+      // =====================================================================
+      // 12. Full-Screen Settings & Sub-Sheets
+      // =====================================================================
+      function openSettingsScreen(focusApiInput = false) {
+        closeSidebar();
+        closePlusPopover();
+        enforceOneTimeApiKeyVisibility();
+        els.settingsSearchInput.value = '';
+        filterSettingsCards('');
+        els.settingsScreen.classList.remove('hidden');
+        els.settingsScreen.classList.add('flex');
+
+        if (focusApiInput && !isApiKeyLocked() && els.oneTimeApiInput) {
+          setTimeout(() => els.oneTimeApiInput.focus(), 80);
+        } else if (!isApiKeyLocked() && els.mainApiSetupInput) {
+          setTimeout(() => els.mainApiSetupInput.focus(), 80);
+        }
+      }
+
+      function closeSettingsScreen() {
+        els.settingsScreen.classList.add('hidden');
+        els.settingsScreen.classList.remove('flex');
+      }
+
+      function filterSettingsCards(query) {
+        const q = (query || '').trim().toLowerCase();
+        document.querySelectorAll('[data-setting-search]').forEach((card) => {
+          const hay = (card.getAttribute('data-setting-search') || '') + ' ' + (card.textContent || '').toLowerCase();
+          card.style.display = !q || hay.includes(q) ? '' : 'none';
+        });
+      }
+
+      function openSubSheet(title, htmlContent, onMount) {
+        els.subSheetTitle.textContent = title;
+        els.subSheetBody.innerHTML = htmlContent;
+        els.subSheetModal.classList.remove('hidden');
+        els.subSheetModal.classList.add('flex');
+        if (typeof onMount === 'function') onMount();
+      }
+
+      function closeSubSheet() {
+        els.subSheetModal.classList.add('hidden');
+        els.subSheetModal.classList.remove('flex');
+      }
+
+      function openCustomizeSheet() {
+        closePlusPopover();
+        closeSidebar();
+
+        const lensCards = Object.entries(LENS_PRESETS)
+          .map(([key, cfg]) => {
+            const active = state.settings.lens === key;
+            return `
+              <button
+                type="button"
+                data-pick-lens="${key}"
+                class="pick-lens-btn p-3 rounded-2xl border text-left transition cursor-pointer ${
+                  active ? 'bg-cosmo-skyBg border-cosmo-blue' : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                }"
+              >
+                <div class="text-xs font-semibold ${active ? 'text-cosmo-blue' : 'text-gray-900'}">${cfg.label}</div>
+                <div class="text-[10px] font-mono text-gray-500 truncate mt-0.5">${cfg.model}</div>
+              </button>
+            `;
+          })
+          .join('');
+
+        openSubSheet(
+          'Customize Cosmo AI',
+          `
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-2">Intelligence Fusion Mode</label>
+                <div class="grid grid-cols-2 gap-2">${lensCards}</div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">OpenRouter Model Slug</label>
+                <input
+                  id="sheet-model-input"
+                  type="text"
+                  value="${escapeHtml(state.settings.model)}"
+                  class="w-full rounded-2xl bg-gray-50 border border-gray-200 focus:border-cosmo-blue focus:bg-white focus:outline-none px-3.5 py-2.5 text-xs font-mono text-gray-900"
+                />
+              </div>
+
+              <label class="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80 text-xs font-medium text-gray-800 cursor-pointer">
+                <span class="flex items-center gap-1.5">
+                  <span class="text-cosmo-blue">✦</span>
+                  <span>Leo Star Thinking Drawer</span>
+                </span>
+                <input id="sheet-leo-check" type="checkbox" ${state.settings.leoThinking ? 'checked' : ''} class="rounded text-cosmo-blue" />
+              </label>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Personality &amp; System Instruction</label>
+                <textarea
+                  id="sheet-sys-input"
+                  rows="3"
+                  class="w-full rounded-2xl bg-gray-50 border border-gray-200 focus:border-cosmo-blue focus:bg-white focus:outline-none px-3.5 py-2 text-xs text-gray-800"
+                >${escapeHtml(state.settings.systemPrompt)}</textarea>
+              </div>
+
+              <button
+                id="sheet-save-customize"
+                type="button"
+                class="w-full py-2.5 rounded-full bg-cosmo-blue hover:bg-cosmo-blueHover text-white text-sm font-semibold transition cursor-pointer"
+              >
+                Save Preferences
+              </button>
+            </div>
+          `,
+          () => {
+            document.querySelectorAll('.pick-lens-btn').forEach((btn) => {
+              btn.addEventListener('click', () => {
+                const k = btn.getAttribute('data-pick-lens');
+                if (LENS_PRESETS[k]) {
+                  state.settings.lens = k;
+                  document.getElementById('sheet-model-input').value = LENS_PRESETS[k].model;
+                  document.querySelectorAll('.pick-lens-btn').forEach((b) => {
+                    const isMatch = b.getAttribute('data-pick-lens') === k;
+                    b.className = `pick-lens-btn p-3 rounded-2xl border text-left transition cursor-pointer ${
+                      isMatch ? 'bg-cosmo-skyBg border-cosmo-blue' : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                    }`;
+                  });
+                }
+              });
+            });
+
+            document.getElementById('sheet-save-customize').addEventListener('click', () => {
+              state.settings.model = document.getElementById('sheet-model-input').value.trim() || 'openrouter/auto';
+              state.settings.leoThinking = Boolean(document.getElementById('sheet-leo-check').checked);
+              state.settings.systemPrompt =
+                document.getElementById('sheet-sys-input').value.trim() || DEFAULT_SYSTEM_PROMPT;
+              saveSettings();
+              renderAll();
+              closeSubSheet();
+              showToast('Cosmo AI preferences saved.');
+            });
+          }
+        );
+      }
+
+      // =====================================================================
+      // 13. General UI Helpers
+      // =====================================================================
+      function openSidebar() {
+        els.sidebar.classList.remove('-translate-x-full');
+        els.sidebarBackdrop.classList.remove('hidden');
+      }
+
+      function closeSidebar() {
+        els.sidebar.classList.add('-translate-x-full');
+        els.sidebarBackdrop.classList.add('hidden');
+      }
+
+      function autoResizeTextarea() {
+        els.promptInput.style.height = 'auto';
+        els.promptInput.style.height = Math.min(els.promptInput.scrollHeight, 144) + 'px';
+      }
+
+      function copyToClipboard(text, btn) {
+        if (!text) return;
+        const done = () => {
+          if (btn) {
+            const old = btn.textContent;
+            btn.textContent = 'Copied';
+            setTimeout(() => { btn.textContent = old; }, 1200);
+          }
+          showToast('Copied to clipboard.');
+        };
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          const ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          if (ok) { done(); return; }
+        } catch (_e) {}
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(text).then(done).catch(() => {});
+        }
+      }
+
+      let toastTimer = null;
+      function showToast(msg, type = 'info') {
+        clearTimeout(toastTimer);
+        const cls =
+          type === 'error'
+            ? 'bg-rose-50 border-rose-200 text-rose-800'
+            : 'bg-gray-900 border-gray-800 text-white';
+        els.toastBanner.className = `fixed top-18 left-1/2 -translate-x-1/2 z-50 max-w-xs sm:max-w-sm px-4 py-2 rounded-full border text-xs font-medium shadow-md ${cls}`;
+        els.toastBanner.textContent = msg;
+        els.toastBanner.classList.remove('hidden');
+        toastTimer = setTimeout(() => els.toastBanner.classList.add('hidden'), 2800);
+      }
+
+      // =====================================================================
+      // 14. Event Bindings
+      // =====================================================================
+      function bindEvents() {
+        // Sidebar Open/Close
+        els.menuToggleBtn.addEventListener('click', openSidebar);
+        els.sidebarBackdrop.addEventListener('click', closeSidebar);
+
+        // Sidebar Search
+        els.sidebarSearchToggle.addEventListener('click', () => {
+          els.sidebarSearchBar.classList.toggle('hidden');
+          if (!els.sidebarSearchBar.classList.contains('hidden')) {
+            els.sidebarSearchInput.focus();
+          } else {
+            state.sidebarSearchQuery = '';
+            els.sidebarSearchInput.value = '';
+            renderSidebarHistory();
+          }
+        });
+
+        els.sidebarSearchInput.addEventListener('input', (e) => {
+          state.sidebarSearchQuery = e.target.value;
+          renderSidebarHistory();
+        });
+
+        els.sidebarSearchClear.addEventListener('click', () => {
+          state.sidebarSearchQuery = '';
+          els.sidebarSearchInput.value = '';
+          els.sidebarSearchBar.classList.add('hidden');
+          renderSidebarHistory();
+        });
+
+        // Sidebar Navigation Items (Images, Library, Customize, Projects, Remote, Explore)
+        document.querySelectorAll('.sidebar-nav-item').forEach((item) => {
+          item.addEventListener('click', () => {
+            const action = item.getAttribute('data-nav-action');
+            closeSidebar();
+            if (action === 'customize') {
+              openCustomizeSheet();
+            } else if (action === 'images') {
+              els.promptInput.value = 'Create a detailed image prompt for: ';
+              autoResizeTextarea();
+              syncBlueActionButton();
+              els.promptInput.focus();
+            } else if (action === 'library') {
+              state.showAllSidebarChats = true;
+              openSidebar();
+              renderSidebarHistory();
+            } else if (action === 'projects') {
+              els.promptInput.value = 'Help me plan a structured project roadmap for: ';
+              autoResizeTextarea();
+              syncBlueActionButton();
+              els.promptInput.focus();
+            } else if (action === 'remote') {
+              els.promptInput.value = 'Write a clean code implementation for: ';
+              autoResizeTextarea();
+              syncBlueActionButton();
+              els.promptInput.focus();
+            } else if (action === 'explore') {
+              openCustomizeSheet();
+            }
+          });
+        });
+
+        els.seeAllChatsBtn.addEventListener('click', () => {
+          state.showAllSidebarChats = !state.showAllSidebarChats;
+          renderSidebarHistory();
+        });
+
+        // Sidebar Footer: Blue "Chat" Pill + Circular Profile Avatar ("SA" -> Settings)
+        els.sidebarNewChatBtn.addEventListener('click', startNewChat);
+        els.sidebarProfileSettingsBtn.addEventListener('click', () => openSettingsScreen(false));
+
+        // Top Bar
+        els.cosmoPlusPill.addEventListener('click', openCustomizeSheet);
+        els.headerNewChatBtn.addEventListener('click', startNewChat);
+
+        // Home Starters
+        document.querySelectorAll('.starter-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            sendPrompt(btn.getAttribute('data-starter') || '');
+          });
+        });
+
+        // "+" Popover
+        els.plusBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          els.plusPopover.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+          if (!els.plusPopover.contains(e.target) && !els.plusBtn.contains(e.target)) {
+            els.plusPopover.classList.add('hidden');
+          }
+        });
+
+        els.popoverToggleLeo.addEventListener('click', () => {
+          state.settings.leoThinking = !state.settings.leoThinking;
+          saveSettings();
+          renderProfileAndHeaders();
+          showToast(`Leo Star Thinking ${state.settings.leoThinking ? 'enabled' : 'disabled'}.`);
+        });
+
+        els.popoverOpenCustomize.addEventListener('click', openCustomizeSheet);
+
+        els.popoverAttachFile.addEventListener('click', () => {
+          els.plusPopover.classList.add('hidden');
+          els.hiddenFileInput.click();
+        });
+
+        els.hiddenFileInput.addEventListener('change', (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            const snippet = String(reader.result || '').slice(0, 4000);
+            els.promptInput.value = `${els.promptInput.value}\n\n[File: ${file.name}]\n${snippet}`.trim();
+            autoResizeTextarea();
+            syncBlueActionButton();
+            els.promptInput.focus();
+          };
+          reader.readAsText(file);
+          e.target.value = '';
+        });
+
+        // Prompt Input & Dynamic Royal Blue Button
+        els.promptInput.addEventListener('input', () => {
+          autoResizeTextarea();
+          syncBlueActionButton();
+        });
+
+        els.promptInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (!state.isGenerating && els.promptInput.value.trim()) {
+              sendPrompt(els.promptInput.value);
+            }
+          }
+        });
+
+        els.chatForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          if (els.promptInput.value.trim()) {
+            sendPrompt(els.promptInput.value);
+          }
+        });
+
+        els.dictateBtn.addEventListener('click', toggleDictation);
+
+        els.blueActionBtn.addEventListener('click', () => {
+          const mode = els.blueActionBtn.dataset.mode;
+          if (mode === 'stop') {
+            stopActiveStream();
+            stopSpeechSynthesis();
+          } else if (mode === 'send') {
+            sendPrompt(els.promptInput.value);
+          } else {
+            openGoLive();
+          }
+        });
+
+        // ===================================================================
+        // ONE-TIME OPENROUTER API KEY SUBMIT & PERMANENT REMOVAL
+        // ===================================================================
+        function handleOneTimeApiSubmit(rawVal) {
+          const keyVal = (rawVal || '').trim();
+          if (!keyVal) {
+            showToast('Please paste a valid OpenRouter API key (sk-or-v1-...).', 'error');
+            return;
+          }
+          try {
+            localStorage.setItem(STORAGE_KEYS.API_KEY, keyVal);
+            localStorage.setItem(STORAGE_KEYS.API_KEY_LOCKED, 'true');
+          } catch (_err) {
+            showToast('Unable to save API key to browser storage.', 'error');
+            return;
+          }
+          enforceOneTimeApiKeyVisibility();
+          showToast('OpenRouter API key saved & locked forever.');
+        }
+
+        if (els.mainApiSetupForm) {
+          els.mainApiSetupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleOneTimeApiSubmit(els.mainApiSetupInput ? els.mainApiSetupInput.value : '');
+          });
+        }
+
+        if (els.oneTimeApiForm) {
+          els.oneTimeApiForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleOneTimeApiSubmit(els.oneTimeApiInput ? els.oneTimeApiInput.value : '');
+          });
+        }
+
+        // Full-Screen Settings Navigation & Rows
+        els.settingsBackBtn.addEventListener('click', closeSettingsScreen);
+
+        els.settingsInfoBtn.addEventListener('click', () => {
+          openSubSheet(
+            'About Cosmo AI',
+            `<p class="text-xs text-gray-600 leading-relaxed">
+              <strong>Cosmo AI</strong> unites Claude editorial clarity, Gemini multi-angle synthesis, GPT precision, and Leo Star reasoning in a fast single-file static interface.
+            </p>`
+          );
+        });
+
+        els.settingsSearchInput.addEventListener('input', (e) => {
+          filterSettingsCards(e.target.value);
+        });
+
+        document.getElementById('setting-row-account').addEventListener('click', () => {
+          openSubSheet(
+            'Account',
+            `
+              <div class="space-y-3">
+                <label class="block text-xs font-semibold text-gray-700">Display Name</label>
+                <input id="acct-name-inp" type="text" value="${escapeHtml(state.settings.accountName)}" class="w-full rounded-2xl bg-gray-50 border border-gray-200 px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-cosmo-blue" />
+                <button id="save-acct-btn" type="button" class="w-full py-2.5 rounded-full bg-cosmo-blue text-white text-sm font-semibold cursor-pointer">Save Name</button>
+              </div>
+            `,
+            () => {
+              document.getElementById('save-acct-btn').addEventListener('click', () => {
+                const v = document.getElementById('acct-name-inp').value.trim();
+                if (v) {
+                  state.settings.accountName = v;
+                  saveSettings();
+                  renderProfileAndHeaders();
+                  closeSubSheet();
+                  showToast('Account updated.');
+                }
+              });
+            }
+          );
+        });
+
+        document.getElementById('setting-row-workspace').addEventListener('click', () => {
+          openSubSheet(
+            'Workspace',
+            `
+              <div class="space-y-2">
+                ${['Personal', 'Studio Pro', 'Research Lab']
+                  .map(
+                    (ws) => `
+                  <button type="button" data-ws="${ws}" class="ws-opt w-full px-4 py-3 rounded-2xl border text-left text-sm font-medium cursor-pointer ${
+                      state.settings.workspace === ws
+                        ? 'bg-cosmo-skyBg border-cosmo-blue text-cosmo-blue'
+                        : 'bg-gray-50 border-gray-200 text-gray-800'
+                    }">${ws}</button>
+                `
+                  )
+                  .join('')}
+              </div>
+            `,
+            () => {
+              document.querySelectorAll('.ws-opt').forEach((b) => {
+                b.addEventListener('click', () => {
+                  state.settings.workspace = b.getAttribute('data-ws');
+                  saveSettings();
+                  renderProfileAndHeaders();
+                  closeSubSheet();
+                });
+              });
+            }
+          );
+        });
+
+        document.getElementById('setting-row-upgrade').addEventListener('click', openCustomizeSheet);
+        document.getElementById('setting-row-customize').addEventListener('click', openCustomizeSheet);
+
+        document.getElementById('setting-row-general').addEventListener('click', () => {
+          openSubSheet(
+            'General',
+            `
+              <div class="space-y-3">
+                <p class="text-xs text-gray-500">Manage local conversation history stored in this browser.</p>
+                <button id="clear-chats-setting-btn" type="button" class="w-full py-2.5 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-semibold cursor-pointer">
+                  Clear All Chat History
+                </button>
+              </div>
+            `,
+            () => {
+              document.getElementById('clear-chats-setting-btn').addEventListener('click', () => {
+                const fresh = createChat();
+                state.chats = [fresh];
+                state.activeChatId = fresh.id;
+                saveChats();
+                saveActiveChatId();
+                renderAll();
+                closeSubSheet();
+                showToast('Chat history cleared.');
+              });
+            }
+          );
+        });
+
+        document.getElementById('setting-row-usage').addEventListener('click', () => {
+          openSubSheet(
+            'Usage and limits',
+            `<div class="text-xs text-gray-600 space-y-2">
+              <p><strong>Saved Conversations:</strong> ${state.chats.length}</p>
+              <p><strong>Active Model:</strong> <span class="font-mono">${escapeHtml(state.settings.model)}</span></p>
+              <p><strong>OpenRouter Connection:</strong> ${isApiKeyLocked() ? 'Active & Locked' : 'Pending one-time setup'}</p>
+            </div>`
+          );
+        });
+
+        document.getElementById('setting-row-notifications').addEventListener('click', () => {
+          openSubSheet(
+            'Notifications',
+            `<p class="text-xs text-gray-600">In-app streaming alerts and voice prompts are active.</p>`
+          );
+        });
+
+        document.getElementById('setting-row-voice').addEventListener('click', () => {
+          openSubSheet(
+            'Voice Settings',
+            `
+              <div class="space-y-4">
+                <label class="flex items-center justify-between text-xs font-medium text-gray-800 cursor-pointer">
+                  <span>Auto-speak every AI reply</span>
+                  <input id="voice-autospeak-chk" type="checkbox" ${state.settings.autoSpeak ? 'checked' : ''} class="rounded text-cosmo-blue" />
+                </label>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Speech Speed (${state.settings.speechRate.toFixed(1)}x)</label>
+                  <input id="voice-rate-range" type="range" min="0.7" max="1.4" step="0.1" value="${state.settings.speechRate}" class="w-full" />
+                </div>
+                <button id="save-voice-btn" type="button" class="w-full py-2.5 rounded-full bg-cosmo-blue text-white text-sm font-semibold cursor-pointer">Save Voice Settings</button>
+              </div>
+            `,
+            () => {
+              document.getElementById('save-voice-btn').addEventListener('click', () => {
+                state.settings.autoSpeak = Boolean(document.getElementById('voice-autospeak-chk').checked);
+                state.settings.speechRate = parseFloat(document.getElementById('voice-rate-range').value) || 1.0;
+                saveSettings();
+                closeSubSheet();
+                showToast('Voice settings updated.');
+              });
+            }
+          );
+        });
+
+        document.getElementById('setting-row-safety').addEventListener('click', () => {
+          openSubSheet(
+            'Safety & wellbeing',
+            `<p class="text-xs text-gray-600 leading-relaxed">Leo Star Thinking promotes transparent step-by-step reasoning and respectful, balanced assistance.</p>`
+          );
+        });
+
+        document.getElementById('setting-row-security').addEventListener('click', () => {
+          openSubSheet(
+            'Security and login',
+            `<p class="text-xs text-gray-600 leading-relaxed">All chat history and credentials remain strictly inside your local browser storage. Once saved, your OpenRouter API key is locked and never displayed again.</p>`
+          );
+        });
+
+        els.closeSubSheetBtn.addEventListener('click', closeSubSheet);
+        els.subSheetModal.addEventListener('click', (e) => {
+          if (e.target === els.subSheetModal) closeSubSheet();
+        });
+
+        // Go Live Controls
+        els.liveLensSelect.addEventListener('change', (e) => {
+          const k = e.target.value;
+          if (LENS_PRESETS[k]) {
+            state.settings.lens = k;
+            state.settings.model = LENS_PRESETS[k].model;
+            saveSettings();
+            renderProfileAndHeaders();
+          }
+        });
+
+        els.closeLiveBtn.addEventListener('click', closeGoLive);
+        els.liveBargeInBtn.addEventListener('click', () => {
+          stopSpeechSynthesis();
+          stopActiveStream();
+          els.livePhaseLabel.textContent = state.live.listening ? 'Listening' : 'Interrupted';
+        });
+
+        els.liveMicToggle.addEventListener('click', () => {
+          if (state.live.listening) {
+            stopLiveMic();
+            els.livePhaseLabel.textContent = 'Muted';
+          } else {
+            startLiveMic();
+          }
+        });
+
+        els.liveTextForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const txt = els.liveTextInput.value.trim();
+          if (!txt) return;
+          els.liveTextInput.value = '';
+          els.liveCaption.textContent = `"${txt}"`;
+          addLiveEntry('You', txt);
+          els.livePhaseLabel.textContent = 'Thinking';
+          const reply = await sendPrompt(txt, { speakReply: true, fromLive: true });
+          if (reply && state.live.active) addLiveEntry('Cosmo AI', reply);
+        });
+
+        // Delegated Code Copy
+        els.messageList.addEventListener('click', (e) => {
+          const btn = e.target.closest('.copy-code-btn');
+          if (!btn) return;
+          try {
+            copyToClipboard(decodeURIComponent(btn.getAttribute('data-copy-code') || ''), btn);
+          } catch (_e) {}
+        });
+
+        // Escape key handler
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            els.plusPopover.classList.add('hidden');
+            if (!els.subSheetModal.classList.contains('hidden')) closeSubSheet();
+            else if (!els.settingsScreen.classList.contains('hidden')) closeSettingsScreen();
+            else if (!els.goLiveOverlay.classList.contains('hidden')) closeGoLive();
+            else closeSidebar();
+          }
+        });
+      }
+
+      // =====================================================================
+      // 15. Initialize Application
+      // =====================================================================
+      enforceOneTimeApiKeyVisibility();
+      bindEvents();
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
+```
